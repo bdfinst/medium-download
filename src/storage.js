@@ -102,14 +102,15 @@ export const createStorageService = (dependencies = {}) => {
   const defaultOutputDir = path.join(__dirname, '..', 'output')
   const outputDir = dependencies.outputDir || defaultOutputDir
 
-  // Save a markdown post with frontmatter
+  // Save a markdown post with frontmatter in its own directory
   const savePost = async (postData, markdown) => {
     try {
-      const postsDir = path.join(outputDir, 'posts')
-      await fileSystem.ensureDirectory(postsDir)
+      const slug = postData.slug || 'untitled'
+      const postDir = path.join(outputDir, slug)
+      await fileSystem.ensureDirectory(postDir)
 
-      const filename = `${postData.slug || 'untitled'}.md`
-      const filePath = path.join(postsDir, filename)
+      const filename = `${slug}.md`
+      const filePath = path.join(postDir, filename)
 
       await fileSystem.writeFile(filePath, markdown)
 
@@ -117,6 +118,7 @@ export const createStorageService = (dependencies = {}) => {
         success: true,
         filePath,
         filename,
+        postDir,
       }
     } catch (error) {
       return {
@@ -126,53 +128,33 @@ export const createStorageService = (dependencies = {}) => {
     }
   }
 
-  // Download and organize images for a post
-  const downloadPostImages = async postData => {
+  // Download only images that are referenced in the markdown content to the post's directory
+  const downloadPostImages = async (postData, referencedImages = []) => {
     try {
-      const imagesDir = path.join(outputDir, 'images')
+      const slug = postData.slug || 'untitled'
+      const postDir = path.join(outputDir, slug)
+      const imagesDir = path.join(postDir, 'images')
       await fileSystem.ensureDirectory(imagesDir)
 
       const downloadedImages = []
-      const slug = postData.slug || 'untitled'
 
-      // Download featured image if available
-      if (postData.featuredImage) {
-        try {
-          const featuredFilename = imageDownloader.generateImageFilename(
-            slug,
-            0,
-            postData.featuredImage,
-            true
-          )
-          const featuredPath = path.join(imagesDir, featuredFilename)
-
-          await imageDownloader.downloadImage(
-            postData.featuredImage,
-            featuredPath
-          )
-
-          downloadedImages.push({
-            originalUrl: postData.featuredImage,
-            localPath: featuredPath,
-            filename: featuredFilename,
-            relativePath: `./images/${featuredFilename}`,
-            type: 'featured',
-          })
-        } catch (error) {
-          console.warn(`Failed to download featured image: ${error.message}`)
-        }
-      }
-
-      // Download content images
-      if (postData.images && Array.isArray(postData.images)) {
-        for (let i = 0; i < postData.images.length; i++) {
-          const image = postData.images[i]
+      // Only download images that are actually referenced in the markdown
+      if (referencedImages && Array.isArray(referencedImages)) {
+        for (let i = 0; i < referencedImages.length; i++) {
+          const image = referencedImages[i]
 
           try {
+            // Determine if this is a featured image
+            const isFeatured =
+              postData.featuredImage &&
+              (image.src === postData.featuredImage ||
+                image.originalSrc === postData.featuredImage)
+
             const filename = imageDownloader.generateImageFilename(
               slug,
               i + 1,
-              image.src
+              image.src,
+              isFeatured
             )
             const imagePath = path.join(imagesDir, filename)
 
@@ -183,12 +165,13 @@ export const createStorageService = (dependencies = {}) => {
               localPath: imagePath,
               filename,
               relativePath: `./images/${filename}`,
-              type: 'content',
+              type: isFeatured ? 'featured' : 'content',
               alt: image.alt,
-              title: image.title,
             })
           } catch (error) {
-            console.warn(`Failed to download image ${i + 1}: ${error.message}`)
+            console.warn(
+              `Failed to download referenced image ${i + 1}: ${error.message}`
+            )
           }
         }
       }
@@ -197,6 +180,7 @@ export const createStorageService = (dependencies = {}) => {
         success: true,
         downloadedImages,
         imagesDir,
+        postDir,
       }
     } catch (error) {
       return {
@@ -280,18 +264,15 @@ export const createStorageService = (dependencies = {}) => {
     }
   }
 
-  // Create directory structure
+  // Create directory structure (now each post gets its own directory)
   const initializeDirectories = async () => {
     try {
-      await fileSystem.ensureDirectory(path.join(outputDir, 'posts'))
-      await fileSystem.ensureDirectory(path.join(outputDir, 'images'))
+      await fileSystem.ensureDirectory(outputDir)
 
       return {
         success: true,
         directories: {
           output: outputDir,
-          posts: path.join(outputDir, 'posts'),
-          images: path.join(outputDir, 'images'),
         },
       }
     } catch (error) {
@@ -302,10 +283,51 @@ export const createStorageService = (dependencies = {}) => {
     }
   }
 
+  // Save a complete post with images in its own directory
+  const savePostWithImages = async (
+    postData,
+    markdown,
+    referencedImages = []
+  ) => {
+    try {
+      // First, download all referenced images to the post directory
+      const imageResult = await downloadPostImages(postData, referencedImages)
+      if (!imageResult.success) {
+        return imageResult
+      }
+
+      // Update markdown to use local image paths
+      const updatedMarkdown = updateImageReferences(
+        markdown,
+        imageResult.downloadedImages
+      )
+
+      // Save the post markdown file in the same directory
+      const postResult = await savePost(postData, updatedMarkdown)
+      if (!postResult.success) {
+        return postResult
+      }
+
+      return {
+        success: true,
+        postDir: postResult.postDir,
+        markdownFile: postResult.filePath,
+        imagesDownloaded: imageResult.downloadedImages.length,
+        downloadedImages: imageResult.downloadedImages,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to save post with images: ${error.message}`,
+      }
+    }
+  }
+
   return {
     savePost,
     downloadPostImages,
     updateImageReferences,
+    savePostWithImages,
     saveMetadata,
     loadMetadata,
     initializeDirectories,

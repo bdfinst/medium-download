@@ -107,15 +107,19 @@ Feature: Medium Blog Scraper
         Then I should download all images to a local images directory
         And images should be named using the post slug and sequence number
         And image references in markdown should point to local files
-        And the directory structure should be:
+        And each post should be in its own directory with the structure:
             """
             output/
-            ├── posts/
-            │   └── post-title-slug.md
-            └── images/
-            ├── post-title-slug-featured.jpg
-            ├── post-title-slug-01.jpg
-            └── post-title-slug-02.png
+            ├── post-title-slug/
+            │   ├── post-title-slug.md
+            │   └── images/
+            │       ├── post-title-slug-featured.jpg
+            │       ├── post-title-slug-01.jpg
+            │       └── post-title-slug-02.png
+            └── another-post/
+                ├── another-post.md
+                └── images/
+                    └── another-post-featured.jpg
             """
 
     Scenario: Handle Authentication Persistence

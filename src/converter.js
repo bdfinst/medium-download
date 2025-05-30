@@ -19,6 +19,19 @@ const createConverter = (options = {}) => {
   // Add GitHub Flavored Markdown support (tables, strikethrough, etc.)
   turndownService.use(gfm)
 
+  // Handle header levels - only main title should be H1, downgrade all others
+  turndownService.addRule('mediumHeaders', {
+    filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+    replacement: (content, node) => {
+      const level = parseInt(node.tagName.charAt(1))
+      // Downgrade all headers by one level (H1 -> H2, H2 -> H3, etc.)
+      // This ensures only the frontmatter title remains as the main H1
+      const adjustedLevel = Math.min(level + 1, 6)
+      const hashes = '#'.repeat(adjustedLevel)
+      return `\n\n${hashes} ${content}\n\n`
+    },
+  })
+
   // Custom rules for Medium-specific elements
   turndownService.addRule('mediumQuotes', {
     filter: ['blockquote'],
@@ -99,6 +112,27 @@ const createConverter = (options = {}) => {
     },
   })
 
+  // Extract images referenced in markdown content
+  const extractReferencedImages = markdown => {
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
+    const images = []
+    let match
+
+    while ((match = imageRegex.exec(markdown)) !== null) {
+      const [, alt, src] = match
+      // Only include valid HTTP(S) URLs, skip data URLs and relative paths
+      if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+        images.push({
+          alt: alt || '',
+          src,
+          originalSrc: src,
+        })
+      }
+    }
+
+    return images
+  }
+
   // Convert HTML to clean markdown
   const convertToMarkdown = html => {
     try {
@@ -146,6 +180,7 @@ const createConverter = (options = {}) => {
 
   return {
     convertToMarkdown,
+    extractReferencedImages,
     turndownService, // Expose for custom rules if needed
   }
 }
@@ -265,22 +300,30 @@ export const createPostConverter = (dependencies = {}) => {
       // Convert HTML content to markdown
       const markdown = converter.convertToMarkdown(postData.content)
 
+      // Extract images that are actually referenced in the markdown
+      const referencedImages = converter.extractReferencedImages(markdown)
+
       // Generate frontmatter with slug
       const frontmatter = frontmatterGenerator.generateYamlFrontmatter({
         ...postData,
         slug,
       })
 
-      // Combine frontmatter and markdown content
-      const fullMarkdown = frontmatter + markdown
+      // Add main title as H1 at the beginning of content (after frontmatter)
+      const title = postData.title || 'Untitled'
+      const contentWithTitle = `# ${title}\n\n${markdown}`
+
+      // Combine frontmatter and markdown content with H1 title
+      const fullMarkdown = frontmatter + contentWithTitle
 
       return {
         success: true,
         markdown: fullMarkdown,
         frontmatter,
-        content: markdown,
+        content: contentWithTitle,
         slug,
         filename: `${slug}.md`,
+        referencedImages, // Only images actually referenced in markdown
       }
     } catch (error) {
       return {
@@ -293,6 +336,7 @@ export const createPostConverter = (dependencies = {}) => {
   return {
     convertPost,
     convertToMarkdown: converter.convertToMarkdown,
+    extractReferencedImages: converter.extractReferencedImages,
     generateFrontmatter: frontmatterGenerator.generateYamlFrontmatter,
   }
 }

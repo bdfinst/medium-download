@@ -392,11 +392,21 @@ describe('Feature: Content Extraction and Processing', () => {
         ],
       }
 
+      // Simulate referenced images (what would come from markdown)
+      const referencedImages = [
+        { src: 'https://example.com/featured.jpg', alt: 'Featured Image' },
+        { src: 'https://example.com/image1.jpg', alt: 'Image 1' },
+        { src: 'https://example.com/image2.png', alt: 'Image 2' },
+      ]
+
       describe('When I process the post', () => {
         let downloadResult
 
         beforeEach(async () => {
-          downloadResult = await storageService.downloadPostImages(postData)
+          downloadResult = await storageService.downloadPostImages(
+            postData,
+            referencedImages
+          )
         })
 
         it('Then I should download all images to a local images directory', () => {

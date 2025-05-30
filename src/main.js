@@ -111,26 +111,14 @@ export const createMediumScraper = (dependencies = {}) => {
             throw new Error(conversionResult.error)
           }
 
-          // Download images
-          const imageResult = await storage.downloadPostImages({
-            ...contentResult,
-            slug: conversionResult.slug,
-          })
-
-          let finalMarkdown = conversionResult.markdown
-
-          // Update image references if images were downloaded
-          if (imageResult.success && imageResult.downloadedImages.length > 0) {
-            finalMarkdown = storage.updateImageReferences(
-              conversionResult.markdown,
-              imageResult.downloadedImages
-            )
-          }
-
-          // Save the markdown file
-          const saveResult = await storage.savePost(
-            { slug: conversionResult.slug },
-            finalMarkdown
+          // Save post with images using the new integrated function
+          const saveResult = await storage.savePostWithImages(
+            {
+              ...contentResult,
+              slug: conversionResult.slug,
+            },
+            conversionResult.markdown,
+            conversionResult.referencedImages
           )
 
           if (!saveResult.success) {
@@ -142,12 +130,15 @@ export const createMediumScraper = (dependencies = {}) => {
             url: post.url,
             title: post.title,
             slug: conversionResult.slug,
-            filename: saveResult.filename,
-            imagesDownloaded: imageResult.downloadedImages?.length || 0,
+            filename: saveResult.markdownFile,
+            imagesDownloaded: saveResult.imagesDownloaded || 0,
+            postDir: saveResult.postDir,
             success: true,
           })
 
-          logger.success(`Saved: ${saveResult.filename}`)
+          logger.success(
+            `Saved: ${conversionResult.slug} (${saveResult.imagesDownloaded} images)`
+          )
         } catch (error) {
           failureCount++
           logger.error(`Failed to process "${post.title}": ${error.message}`)
