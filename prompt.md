@@ -13,7 +13,7 @@ Create a prompt and feature file to use with Claude Code
 I want claude code reference the feature file and use acceptance test driven development.
 It should use eslint and prettier and should fix any linting and style issues after each test passes.
 
-*Note*: I worked with Claude to refine the CLAUDE.md file. For example, it wanted to use Cucumber, so I instructed it to
+_Note_: I worked with Claude to refine the CLAUDE.md file. For example, it wanted to use Cucumber, so I instructed it to
 use Jest with BDD assertions for all testing.
 
 The CLAUDE.md file is the implementation plan and is fully machine generated from the conversation with Claude.

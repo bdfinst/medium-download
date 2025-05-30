@@ -43,7 +43,7 @@ medium-scraper/
     "start": "node src/main.js",
     "test": "jest",
     "test:acceptance": "jest test/acceptance",
-    "test:unit": "jest test/unit", 
+    "test:unit": "jest test/unit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/ test/ --ext .js",
@@ -90,7 +90,7 @@ export default {
 
 1. **Read the feature specifications** in `features/medium-scraper.feature`
 2. **Write Jest acceptance tests** that describe the expected behavior in BDD style
-3. **Implement features to satisfy the acceptance tests** 
+3. **Implement features to satisfy the acceptance tests**
 4. **Validate each test passes** before moving to the next
 5. **Reference the feature file continuously** during development to ensure requirements are met
 
@@ -179,27 +179,27 @@ Expected structure after setup (see SETUP.md for detailed creation instructions)
 
 medium-scraper/
 ├── features/
-│   └── medium-scraper.feature      # Gherkin specifications (reference only)
-├── src/                           # Application code (you will create)
-│   ├── auth.js
-│   ├── scraper.js
-│   ├── converter.js
-│   ├── storage.js
-│   ├── config.js
-│   ├── logger.js
-│   └── main.js
+│ └── medium-scraper.feature # Gherkin specifications (reference only)
+├── src/ # Application code (you will create)
+│ ├── auth.js
+│ ├── scraper.js
+│ ├── converter.js
+│ ├── storage.js
+│ ├── config.js
+│ ├── logger.js
+│ └── main.js
 ├── test/
-│   ├── acceptance/                # Jest acceptance tests (you will create)
-│   └── unit/                     # Jest unit tests (you will create)
+│ ├── acceptance/ # Jest acceptance tests (you will create)
+│ └── unit/ # Jest unit tests (you will create)
 ├── output/
-│   ├── posts/
-│   ├── images/
-│   └── metadata.json
-├── CLAUDE.md                      # This file
-├── SETUP.md                       # Setup instructions
-└── [config files from SETUP.md]   # All .js, .json config files
+│ ├── posts/
+│ ├── images/
+│ └── metadata.json
+├── CLAUDE.md # This file
+├── SETUP.md # Setup instructions
+└── [config files from SETUP.md] # All .js, .json config files
 
-```
+````
 
 ### CLI Interface
 - Interactive prompts for configuration
@@ -227,7 +227,7 @@ published: true
 # Post Title
 
 Post content in clean markdown...
-```
+````
 
 ## Implementation Process - ATDD Workflow
 
@@ -298,7 +298,7 @@ Implement these in order, ensuring each scenario passes before proceeding:
 - [ ] "Handle Authentication Persistence"
 - [ ] Token refresh and re-authentication flows
 
-### Phase 2: Content Discovery Scenarios  
+### Phase 2: Content Discovery Scenarios
 
 - [ ] "Discover All Published Posts"
 - [ ] Handle pagination and infinite scroll
@@ -351,7 +351,7 @@ npm run quality:check # Verify code quality without changes
 
 Create `jest.config.js`:
 
-```javascript
+````javascript
 export default {
   preset: 'jest-environment-node',
   testEnvironment: 'node',
@@ -391,20 +391,20 @@ export default {
     'no-duplicate-imports': 'error'
   }
 };
-```
+````
 
 Create `.prettierrc.js`:
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS
+  semi: false, // NO SEMICOLONS
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 ### Step Definition Structure
@@ -412,7 +412,7 @@ export default {
 In `test/acceptance/`, create Jest BDD test files that mirror the feature scenarios:
 
 - `auth.test.js` - Authentication scenario tests
-- `scraper.test.js` - Content discovery and processing tests  
+- `scraper.test.js` - Content discovery and processing tests
 - `cli.test.js` - Command line interface tests
 - `error.test.js` - Error handling tests
 
@@ -424,11 +424,11 @@ describe('Feature: Authentication', () => {
     describe('Given I run the scraper for the first time', () => {
       // Setup code
     })
-    
+
     describe('When I execute the authentication command', () => {
       // Action code
     })
-    
+
     it('Then I should be prompted to authorize with Google', () => {
       // Assertion code
     })
@@ -449,7 +449,7 @@ describe('Feature: Authentication', () => {
 Implementation order (based on feature file scenario order):
 
 1. Authentication flow scenarios
-2. Content discovery scenarios  
+2. Content discovery scenarios
 3. Content processing scenarios
 4. Error handling scenarios
 5. Advanced operational scenarios
@@ -515,21 +515,21 @@ Every scenario implementation must pass:
 4. ✅ Code follows functional programming constraints
 
 **NO EXCEPTIONS**: Code that doesn't pass quality checks cannot proceed to the next scenario.: '$1'
-  },
-  transform: {},
-  testMatch: [
-    '**/test/**/*.test.js'
-  ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js'
-  ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  verbose: true
+},
+transform: {},
+testMatch: [
+'**/test/**/*.test.js'
+],
+collectCoverageFrom: [
+'src/**/*.js',
+'!src/**/*.test.js'
+],
+coverageDirectory: 'coverage',
+coverageReporters: ['text', 'lcov', 'html'],
+verbose: true
 };
 
-```
+````
 
 ### BDD Test Structure Example
 ```javascript
@@ -541,17 +541,17 @@ describe('Google OAuth Authentication', () => {
         // Test implementation
         expect(authPrompt).toHaveBeenCalled()
       })
-      
+
       it('should open my default browser', async () => {
-        // Test implementation  
+        // Test implementation
         expect(browserLauncher).toHaveBeenCalledWith(expect.stringContaining('oauth'))
       })
-      
+
       it('should redirect to Google OAuth consent screen', async () => {
         // Test implementation
         expect(response.url).toContain('accounts.google.com')
       })
-      
+
       it('should store auth tokens securely after granting permission', async () => {
         // Test implementation
         expect(tokenStorage.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -562,7 +562,7 @@ describe('Google OAuth Authentication', () => {
     })
   })
 })
-```
+````
 
 ### Code Quality Configuration
 
@@ -573,15 +573,12 @@ export default {
   env: {
     es2022: true,
     node: true,
-    mocha: true
+    mocha: true,
   },
-  extends: [
-    'eslint:recommended',
-    'prettier'
-  ],
+  extends: ['eslint:recommended', 'prettier'],
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   rules: {
     'no-console': 'warn',
@@ -589,23 +586,23 @@ export default {
     'no-var': 'error',
     'prefer-arrow-callback': 'error',
     'arrow-spacing': 'error',
-    'no-duplicate-imports': 'error'
-  }
-};
+    'no-duplicate-imports': 'error',
+  },
+}
 ```
 
 Create `.prettierrc.js`:
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS
+  semi: false, // NO SEMICOLONS
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 ### Step Definition Structure
@@ -613,7 +610,7 @@ export default {
 In `test/acceptance/`, create step definition files that mirror the feature scenarios:
 
 - `auth-steps.js` - Authentication scenario steps
-- `scraper-steps.js` - Content discovery and processing steps  
+- `scraper-steps.js` - Content discovery and processing steps
 - `cli-steps.js` - Command line interface steps
 - `error-steps.js` - Error handling steps
 
@@ -630,7 +627,7 @@ In `test/acceptance/`, create step definition files that mirror the feature scen
 Implementation order (based on feature file scenario order):
 
 1. Authentication flow scenarios
-2. Content discovery scenarios  
+2. Content discovery scenarios
 3. Content processing scenarios
 4. Error handling scenarios
 5. Advanced operational scenarios
@@ -696,21 +693,21 @@ Every scenario implementation must pass:
 4. ✅ Code follows functional programming constraints
 
 **NO EXCEPTIONS**: Code that doesn't pass quality checks cannot proceed to the next scenario.: '$1'
-  },
-  transform: {},
-  testMatch: [
-    '**/test/**/*.test.js'
-  ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js'
-  ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  verbose: true
+},
+transform: {},
+testMatch: [
+'**/test/**/*.test.js'
+],
+collectCoverageFrom: [
+'src/**/*.js',
+'!src/**/*.test.js'
+],
+coverageDirectory: 'coverage',
+coverageReporters: ['text', 'lcov', 'html'],
+verbose: true
 };
 
-```
+````
 
 4. **Create .eslintrc.js**:
 ```javascript
@@ -737,20 +734,20 @@ export default {
     'no-duplicate-imports': 'error'
   }
 };
-```
+````
 
 5. **Create .prettierrc.js**:
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS (mandatory)
+  semi: false, // NO SEMICOLONS (mandatory)
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 6. **Run setup commands**:
@@ -927,18 +924,17 @@ Each markdown file should have YAML frontmatter:
 
 ```yaml
 ---
-title: "Post Title"
-subtitle: "Post Subtitle"
-date: "2024-01-15T10:30:00Z"
-lastModified: "2024-01-16T14:22:00Z"
-author: "Author Name"
-tags: ["tag1", "tag2", "tag3"]
-readingTime: "5 min read"
-mediumUrl: "https://medium.com/@user/post-title-123abc"
-featuredImage: "./images/featured-image.jpg"
+title: 'Post Title'
+subtitle: 'Post Subtitle'
+date: '2024-01-15T10:30:00Z'
+lastModified: '2024-01-16T14:22:00Z'
+author: 'Author Name'
+tags: ['tag1', 'tag2', 'tag3']
+readingTime: '5 min read'
+mediumUrl: 'https://medium.com/@user/post-title-123abc'
+featuredImage: './images/featured-image.jpg'
 published: true
 ---
-
 # Post Title
 
 Post content in clean markdown...
@@ -1013,7 +1009,7 @@ Implement these in order, ensuring each scenario passes before proceeding:
 - [ ] "Handle Authentication Persistence"
 - [ ] Token refresh and re-authentication flows
 
-### Phase 2: Content Discovery Scenarios  
+### Phase 2: Content Discovery Scenarios
 
 - [ ] "Discover All Published Posts"
 - [ ] Handle pagination and infinite scroll
@@ -1075,7 +1071,7 @@ Create the following test infrastructure:
 
 Create `jest.config.js`:
 
-```javascript
+````javascript
 export default {
   preset: 'jest-environment-node',
   testEnvironment: 'node',
@@ -1115,20 +1111,20 @@ export default {
     'no-duplicate-imports': 'error'
   }
 };
-```
+````
 
 Create `.prettierrc.js`:
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS
+  semi: false, // NO SEMICOLONS
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 ### Step Definition Structure
@@ -1136,7 +1132,7 @@ export default {
 In `test/acceptance/`, create Jest BDD test files that mirror the feature scenarios:
 
 - `auth.test.js` - Authentication scenario tests
-- `scraper.test.js` - Content discovery and processing tests  
+- `scraper.test.js` - Content discovery and processing tests
 - `cli.test.js` - Command line interface tests
 - `error.test.js` - Error handling tests
 
@@ -1148,11 +1144,11 @@ describe('Feature: Authentication', () => {
     describe('Given I run the scraper for the first time', () => {
       // Setup code
     })
-    
+
     describe('When I execute the authentication command', () => {
       // Action code
     })
-    
+
     it('Then I should be prompted to authorize with Google', () => {
       // Assertion code
     })
@@ -1173,7 +1169,7 @@ describe('Feature: Authentication', () => {
 Implementation order (based on feature file scenario order):
 
 1. Authentication flow scenarios
-2. Content discovery scenarios  
+2. Content discovery scenarios
 3. Content processing scenarios
 4. Error handling scenarios
 5. Advanced operational scenarios
@@ -1239,21 +1235,21 @@ Every scenario implementation must pass:
 4. ✅ Code follows functional programming constraints
 
 **NO EXCEPTIONS**: Code that doesn't pass quality checks cannot proceed to the next scenario.: '$1'
-  },
-  transform: {},
-  testMatch: [
-    '**/test/**/*.test.js'
-  ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js'
-  ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
-  verbose: true
+},
+transform: {},
+testMatch: [
+'**/test/**/*.test.js'
+],
+collectCoverageFrom: [
+'src/**/*.js',
+'!src/**/*.test.js'
+],
+coverageDirectory: 'coverage',
+coverageReporters: ['text', 'lcov', 'html'],
+verbose: true
 };
 
-```
+````
 
 ### BDD Test Structure Example
 ```javascript
@@ -1265,17 +1261,17 @@ describe('Google OAuth Authentication', () => {
         // Test implementation
         expect(authPrompt).toHaveBeenCalled()
       })
-      
+
       it('should open my default browser', async () => {
-        // Test implementation  
+        // Test implementation
         expect(browserLauncher).toHaveBeenCalledWith(expect.stringContaining('oauth'))
       })
-      
+
       it('should redirect to Google OAuth consent screen', async () => {
         // Test implementation
         expect(response.url).toContain('accounts.google.com')
       })
-      
+
       it('should store auth tokens securely after granting permission', async () => {
         // Test implementation
         expect(tokenStorage.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -1286,7 +1282,7 @@ describe('Google OAuth Authentication', () => {
     })
   })
 })
-```
+````
 
 ### Code Quality Configuration
 
@@ -1297,15 +1293,12 @@ export default {
   env: {
     es2022: true,
     node: true,
-    mocha: true
+    mocha: true,
   },
-  extends: [
-    'eslint:recommended',
-    'prettier'
-  ],
+  extends: ['eslint:recommended', 'prettier'],
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   rules: {
     'no-console': 'warn',
@@ -1313,23 +1306,23 @@ export default {
     'no-var': 'error',
     'prefer-arrow-callback': 'error',
     'arrow-spacing': 'error',
-    'no-duplicate-imports': 'error'
-  }
-};
+    'no-duplicate-imports': 'error',
+  },
+}
 ```
 
 Create `.prettierrc.js`:
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS
+  semi: false, // NO SEMICOLONS
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 ### Step Definition Structure
@@ -1337,7 +1330,7 @@ export default {
 In `test/acceptance/`, create step definition files that mirror the feature scenarios:
 
 - `auth-steps.js` - Authentication scenario steps
-- `scraper-steps.js` - Content discovery and processing steps  
+- `scraper-steps.js` - Content discovery and processing steps
 - `cli-steps.js` - Command line interface steps
 - `error-steps.js` - Error handling steps
 
@@ -1354,7 +1347,7 @@ In `test/acceptance/`, create step definition files that mirror the feature scen
 Implementation order (based on feature file scenario order):
 
 1. Authentication flow scenarios
-2. Content discovery scenarios  
+2. Content discovery scenarios
 3. Content processing scenarios
 4. Error handling scenarios
 5. Advanced operational scenarios

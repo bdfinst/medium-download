@@ -25,7 +25,7 @@ touch features/medium-scraper.feature
 ```json
 {
   "name": "medium-scraper",
-  "version": "1.0.0", 
+  "version": "1.0.0",
   "type": "module",
   "description": "Scrape Medium blog posts to markdown with frontmatter",
   "main": "src/main.js",
@@ -34,7 +34,7 @@ touch features/medium-scraper.feature
     "test": "jest",
     "test:acceptance": "jest test/acceptance",
     "test:unit": "jest test/unit",
-    "test:watch": "jest --watch", 
+    "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/ test/ --ext .js",
     "lint:fix": "eslint src/ test/ --ext .js --fix",
@@ -45,7 +45,7 @@ touch features/medium-scraper.feature
   },
   "dependencies": {
     "puppeteer": "^21.0.0",
-    "googleapis": "^126.0.0", 
+    "googleapis": "^126.0.0",
     "turndown": "^7.1.0",
     "gray-matter": "^4.0.0"
   },
@@ -68,24 +68,19 @@ export default {
   extensionsToTreatAsEsm: ['.js'],
   globals: {
     'ts-jest': {
-      useESM: true
-    }
+      useESM: true,
+    },
   },
   moduleNameMapping: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {},
-  testMatch: [
-    '**/test/**/*.test.js'
-  ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js'
-  ],
-  coverageDirectory: 'coverage', 
+  testMatch: ['**/test/**/*.test.js'],
+  collectCoverageFrom: ['src/**/*.js', '!src/**/*.test.js'],
+  coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  verbose: true
-};
+  verbose: true,
+}
 ```
 
 ### 3. .eslintrc.js
@@ -95,15 +90,12 @@ export default {
   env: {
     es2022: true,
     node: true,
-    jest: true
+    jest: true,
   },
-  extends: [
-    'eslint:recommended',
-    'prettier'
-  ],
+  extends: ['eslint:recommended', 'prettier'],
   parserOptions: {
     ecmaVersion: 'latest',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   rules: {
     'no-console': 'warn',
@@ -111,23 +103,23 @@ export default {
     'no-var': 'error',
     'prefer-arrow-callback': 'error',
     'arrow-spacing': 'error',
-    'no-duplicate-imports': 'error'
-  }
-};
+    'no-duplicate-imports': 'error',
+  },
+}
 ```
 
 ### 4. .prettierrc.js
 
 ```javascript
 export default {
-  semi: false,              // NO SEMICOLONS
+  semi: false, // NO SEMICOLONS
   singleQuote: true,
   tabWidth: 2,
   trailingComma: 'es5',
   printWidth: 80,
   arrowParens: 'avoid',
-  endOfLine: 'lf'
-};
+  endOfLine: 'lf',
+}
 ```
 
 ## Installation & Verification
@@ -139,7 +131,7 @@ npm install
 # Verify Jest works
 npm test
 
-# Verify ESLint works  
+# Verify ESLint works
 npm run lint
 
 # Verify Prettier works
