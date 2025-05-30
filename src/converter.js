@@ -20,12 +20,24 @@ const createConverter = (options = {}) => {
   turndownService.use(gfm)
 
   // Handle header levels - only main title should be H1, downgrade all others
+  // This rule will be customized per conversion to handle the first H1 specially
   turndownService.addRule('mediumHeaders', {
     filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
     replacement: (content, node) => {
       const level = parseInt(node.tagName.charAt(1))
-      // Downgrade all headers by one level (H1 -> H2, H2 -> H3, etc.)
-      // This ensures only the frontmatter title remains as the main H1
+
+      // Check if this is the first H1 and matches the title (set during conversion)
+      if (
+        level === 1 &&
+        turndownService.isFirstH1MatchingTitle &&
+        content.trim().toLowerCase() ===
+          turndownService.expectedTitle?.toLowerCase()
+      ) {
+        // Keep this as H1 since it's the actual title
+        return `\n\n# ${content}\n\n`
+      }
+
+      // Downgrade all other headers by one level (H1 -> H2, H2 -> H3, etc.)
       const adjustedLevel = Math.min(level + 1, 6)
       const hashes = '#'.repeat(adjustedLevel)
       return `\n\n${hashes} ${content}\n\n`
@@ -297,8 +309,17 @@ export const createPostConverter = (dependencies = {}) => {
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '') || 'untitled'
 
+      // Set up title handling for conversion
+      const title = postData.title || 'Untitled'
+      converter.turndownService.expectedTitle = title
+      converter.turndownService.isFirstH1MatchingTitle = true
+
       // Convert HTML content to markdown
       const markdown = converter.convertToMarkdown(postData.content)
+
+      // Clean up the flags
+      delete converter.turndownService.expectedTitle
+      delete converter.turndownService.isFirstH1MatchingTitle
 
       // Extract images that are actually referenced in the markdown
       const referencedImages = converter.extractReferencedImages(markdown)
@@ -310,8 +331,18 @@ export const createPostConverter = (dependencies = {}) => {
       })
 
       // Add main title as H1 at the beginning of content (after frontmatter)
-      const title = postData.title || 'Untitled'
-      const contentWithTitle = `# ${title}\n\n${markdown}`
+      // But only if the content doesn't already start with the same title as H1
+      const markdownLines = markdown.trim().split('\n')
+      const firstLine = markdownLines[0] || ''
+
+      // Check if content already starts with the same title as H1
+      const alreadyHasTitle =
+        firstLine.startsWith('# ') &&
+        firstLine.slice(2).trim().toLowerCase() === title.toLowerCase()
+
+      const contentWithTitle = alreadyHasTitle
+        ? markdown
+        : `# ${title}\n\n${markdown}`
 
       // Combine frontmatter and markdown content with H1 title
       const fullMarkdown = frontmatter + contentWithTitle

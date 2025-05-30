@@ -1,5 +1,7 @@
-import puppeteer from 'puppeteer'
 import { URL } from 'url'
+
+import puppeteer from 'puppeteer'
+
 import { createAuthService } from './auth.js'
 
 // Factory function for creating browser launcher
@@ -130,8 +132,6 @@ const createPostExtractor = () => ({
         /* eslint-enable no-undef */
       })
 
-      console.log('Debug - Page structure:', pageInfo)
-
       // Try multiple selector strategies to find posts
       const posts = await page.evaluate(() => {
         /* eslint-disable no-undef */
@@ -140,19 +140,36 @@ const createPostExtractor = () => ({
         const isValidPostUrl = url => {
           if (!url) return false
 
+          // Remove query parameters and fragments for cleaner checking
+          const cleanUrl = url.split('?')[0].split('#')[0]
+
+          // Exclude profile homepages explicitly
+          if (cleanUrl.match(/^https?:\/\/[^/]+\.medium\.com\/?$/)) {
+            return false // This is just the homepage: username.medium.com/
+          }
+          if (cleanUrl.match(/^https?:\/\/medium\.com\/@[^/]+\/?$/)) {
+            return false // This is just the profile: medium.com/@username/
+          }
+
           // Personal profile posts: medium.com/@username/post-title
-          if (url.includes('/@')) return true
+          if (url.includes('/@')) {
+            const pathParts = cleanUrl.split('/')
+            // Must have username and post slug
+            return (
+              pathParts.length >= 5 && pathParts[4] && pathParts[4].length > 0
+            )
+          }
 
           // Subdomain posts: username.medium.com/post-title (but not just the domain)
           if (url.includes('.medium.com')) {
-            const pathParts = url.split('/')
+            const pathParts = cleanUrl.split('/')
             return (
               pathParts.length > 3 &&
-              !url.endsWith('.medium.com/') &&
-              !url.endsWith('.medium.com') &&
+              !cleanUrl.endsWith('.medium.com/') &&
+              !cleanUrl.endsWith('.medium.com') &&
               pathParts[3] !== '' &&
-              pathParts[3].length > 10
-            ) // Actual post slugs are longer
+              pathParts[3].length > 8 // Post slugs are typically longer
+            )
           }
 
           // Publication posts: medium.com/publication/post-title
@@ -161,7 +178,10 @@ const createPostExtractor = () => ({
             !url.includes('medium.com/@') &&
             !url.includes('medium.com/m/')
           ) {
-            return url.split('/').length > 4
+            const pathParts = cleanUrl.split('/')
+            return (
+              pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
+            )
           }
 
           return false
@@ -360,7 +380,7 @@ const createPostExtractor = () => ({
         /* eslint-enable no-undef */
       })
 
-      console.log(`Debug - Extracted ${posts.length} posts:`, posts.slice(0, 3))
+      console.log(`Extracted ${posts.length} posts`)
 
       return posts.filter(
         post =>
@@ -435,8 +455,6 @@ const createPostExtractor = () => ({
 const createScrollHandler = () => ({
   scrollToLoadMore: async page => {
     try {
-      console.log('Debug - Scrolling to load more content...')
-
       // Get current page height and post count before scrolling
       const beforeState = await page.evaluate(() => {
         /* eslint-disable no-undef */
@@ -450,14 +468,8 @@ const createScrollHandler = () => ({
         /* eslint-enable no-undef */
       })
 
-      console.log(
-        `Debug - Before scroll: height=${beforeState.height}, posts=${beforeState.postCount}, links=${beforeState.linkCount}`
-      )
-
       // Try multiple scroll strategies
       for (let strategy = 0; strategy < 3; strategy++) {
-        console.log(`Debug - Trying scroll strategy ${strategy + 1}`)
-
         if (strategy === 0) {
           // Strategy 1: Slow scroll to bottom
           await page.evaluate(() => {
@@ -529,19 +541,12 @@ const createScrollHandler = () => ({
           /* eslint-enable no-undef */
         })
 
-        console.log(
-          `Debug - After strategy ${strategy + 1}: height=${afterState.height}, posts=${afterState.postCount}, links=${afterState.linkCount}`
-        )
-
         // If we found new content, break early
         if (
           afterState.height > beforeState.height ||
           afterState.postCount > beforeState.postCount ||
           afterState.linkCount > beforeState.linkCount
         ) {
-          console.log(
-            `Debug - Strategy ${strategy + 1} successful - new content loaded`
-          )
           break
         }
       }
@@ -552,13 +557,12 @@ const createScrollHandler = () => ({
           'button[aria-label*="more"], button[aria-label*="load"], [data-testid*="load-more"]'
         )
         for (const button of loadMoreButtons) {
-          console.log('Debug - Found and clicking load more button')
           await button.click()
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       } catch (error) {
-        console.log(
-          'Debug - No load more buttons found or click failed:',
+        console.error(
+          'No load more buttons found or click failed:',
           error.message
         )
       }
@@ -568,7 +572,7 @@ const createScrollHandler = () => ({
 
       return true
     } catch (error) {
-      console.log(`Debug - Scroll error: ${error.message}`)
+      console.error(`Scroll error: ${error.message}`)
       return false
     }
   },
@@ -629,17 +633,15 @@ export const createScraperService = (dependencies = {}) => {
       )
 
       // Navigate to profile page using normalized URL
-      console.log(`Debug - Navigating to: ${normalizedUrl}`)
       await page.goto(normalizedUrl, {
         waitUntil: 'networkidle2',
         timeout: 30000,
       })
 
-      console.log(`Debug - Navigated to: ${normalizedUrl}`)
-      console.log(`Debug - Looking for posts by user: ${username}`)
+      console.log(`Looking for posts by user: ${username}`)
 
       // Wait for Medium's content to fully load
-      console.log('Debug - Waiting for page content to load...')
+      console.log('Waiting for page content to load...')
 
       // Wait for the page to be more fully rendered
       await new Promise(resolve => setTimeout(resolve, 3000))
@@ -647,8 +649,6 @@ export const createScraperService = (dependencies = {}) => {
       // Get page title and basic info for debugging
       const pageTitle = await page.title()
       const currentUrl = page.url()
-      console.log(`Debug - Page title: ${pageTitle}`)
-      console.log(`Debug - Current URL: ${currentUrl}`)
 
       // Check if we were redirected or if there's an error
       if (currentUrl.includes('error') || currentUrl.includes('404')) {
@@ -671,20 +671,8 @@ export const createScraperService = (dependencies = {}) => {
           },
           { timeout: 20000 }
         )
-        console.log('Debug - Found some content elements')
-      } catch {
-        console.log('Debug - Timeout waiting for content, proceeding anyway...')
-
-        // Get more detailed debugging info
-        const bodyText = await page.$eval('body', el =>
-          el.textContent.substring(0, 500)
-        )
-        const allLinks = await page.$$eval('a', links => links.length)
-        const allDivs = await page.$$eval('div', divs => divs.length)
-
-        console.log(`Debug - Body text sample: ${bodyText}`)
-        console.log(`Debug - Total links on page: ${allLinks}`)
-        console.log(`Debug - Total divs on page: ${allDivs}`)
+      } catch (error) {
+        console.error(error)
       }
 
       // Take a screenshot for debugging if enabled
@@ -694,9 +682,8 @@ export const createScraperService = (dependencies = {}) => {
             path: 'debug-medium-page.png',
             fullPage: true,
           })
-          console.log('Debug - Screenshot saved as debug-medium-page.png')
         } catch (error) {
-          console.log('Debug - Failed to save screenshot:', error.message)
+          console.log('Failed to save screenshot:', error.message)
         }
       }
 
@@ -705,19 +692,10 @@ export const createScraperService = (dependencies = {}) => {
       let attempts = 0
       const maxAttempts = options.maxScrollAttempts || 20
 
-      console.log(
-        `Debug - Starting post extraction with max ${maxAttempts} attempts`
-      )
-
       // Collect posts with infinite scroll handling
       while (attempts < maxAttempts) {
-        console.log(`Debug - Extraction attempt ${attempts + 1}/${maxAttempts}`)
-
         // Extract posts from current page state
         const currentPosts = await postExtractor.extractPostsFromPage(page)
-        console.log(
-          `Debug - Found ${currentPosts.length} posts in attempt ${attempts + 1}`
-        )
 
         // Merge with existing posts, avoiding duplicates
         const newPosts = currentPosts.filter(
@@ -725,7 +703,6 @@ export const createScraperService = (dependencies = {}) => {
         )
 
         allPosts = [...allPosts, ...newPosts]
-        console.log(`Debug - Total unique posts so far: ${allPosts.length}`)
 
         // Check if we found new content
         if (allPosts.length === previousPostCount) {
@@ -747,12 +724,6 @@ export const createScraperService = (dependencies = {}) => {
         await scrollHandler.scrollToLoadMore(page)
         attempts++
       }
-
-      console.log(`Debug - Before filtering: ${allPosts.length} posts found`)
-      console.log(
-        `Debug - Sample URLs:`,
-        allPosts.slice(0, 3).map(p => p.url)
-      )
 
       // Filter to only include posts from this user (including publication posts)
       const userPosts = allPosts.filter(post => {
@@ -787,10 +758,6 @@ export const createScraperService = (dependencies = {}) => {
 
       console.log(
         `Debug - After filtering for user ${username}: ${userPosts.length} posts`
-      )
-      console.log(
-        `Debug - Sample filtered URLs:`,
-        userPosts.slice(0, 3).map(p => p.url)
       )
 
       return {
@@ -1025,10 +992,10 @@ export const createScraperService = (dependencies = {}) => {
 
 // Export individual factory functions for testing
 export {
-  createUrlValidator,
+  createBrowserLauncher,
   createPostExtractor,
   createScrollHandler,
-  createBrowserLauncher,
+  createUrlValidator,
 }
 
 // Default export for convenience

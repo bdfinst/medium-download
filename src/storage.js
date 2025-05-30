@@ -54,7 +54,7 @@ const createImageDownloader = () => ({
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const buffer = await response.buffer()
+      const buffer = await response.arrayBuffer()
 
       // Ensure output directory exists
       const dir = path.dirname(outputPath)
