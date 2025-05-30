@@ -346,9 +346,8 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         let normalizedUrl
 
         beforeEach(async () => {
-          const scraperModule = await import('../../src/scraper.js')
-          const validator = scraperModule.createUrlValidator()
-          normalizedUrl = validator.normalizeProfileUrl(
+          const utilsModule = await import('../../src/utils.js')
+          normalizedUrl = utilsModule.urlValidator.normalizeProfileUrl(
             'https://testuser.medium.com/'
           )
         })
@@ -366,9 +365,10 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         let username
 
         beforeEach(async () => {
-          const scraperModule = await import('../../src/scraper.js')
-          const validator = scraperModule.createUrlValidator()
-          username = validator.extractUsername('https://testuser.medium.com/')
+          const utilsModule = await import('../../src/utils.js')
+          username = utilsModule.urlValidator.extractUsername(
+            'https://testuser.medium.com/'
+          )
         })
 
         it('Then it should extract the username with @ prefix', () => {
@@ -382,9 +382,8 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         let isValid
 
         beforeEach(async () => {
-          const scraperModule = await import('../../src/scraper.js')
-          const validator = scraperModule.createUrlValidator()
-          isValid = validator.isValidMediumProfile(
+          const utilsModule = await import('../../src/utils.js')
+          isValid = utilsModule.urlValidator.isValidMediumProfile(
             'https://testuser.medium.com/'
           )
         })

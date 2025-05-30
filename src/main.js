@@ -4,22 +4,11 @@ import { createAuthService } from './auth.js'
 import { createScraperService } from './scraper.js'
 import { createPostConverter } from './converter.js'
 import { createStorageService } from './storage.js'
+import { logger } from './utils.js'
 import { config } from 'dotenv'
 
 // Load environment variables
 config()
-
-// Factory function for creating logger
-const createLogger = () => ({
-  info: message => console.log(`ℹ️  ${message}`),
-  success: message => console.log(`✅ ${message}`),
-  warn: message => console.warn(`⚠️  ${message}`),
-  error: message => console.error(`❌ ${message}`),
-  progress: (current, total, message) => {
-    const percentage = Math.round((current / total) * 100)
-    console.log(`📊 [${current}/${total}] ${percentage}% - ${message}`)
-  },
-})
 
 // Factory function for creating the main scraper orchestrator
 export const createMediumScraper = (dependencies = {}) => {
@@ -27,17 +16,17 @@ export const createMediumScraper = (dependencies = {}) => {
   const scraperService = dependencies.scraperService || createScraperService()
   const converter = dependencies.converter || createPostConverter()
   const storage = dependencies.storage || createStorageService()
-  const logger = dependencies.logger || createLogger()
+  const loggerInstance = dependencies.logger || logger
 
   // Main scraping workflow
   const scrapeProfile = async (profileUrl, options = {}) => {
     const startTime = Date.now()
 
     try {
-      logger.info('Starting Medium profile scraping...')
+      loggerInstance.info('Starting Medium profile scraping...')
 
       // Step 1: Validate authentication
-      logger.info('Checking authentication status...')
+      loggerInstance.info('Checking authentication status...')
       const authStatus = await authService.getAuthStatus()
 
       if (!authStatus.authenticated) {
@@ -46,18 +35,20 @@ export const createMediumScraper = (dependencies = {}) => {
         )
       }
 
-      logger.success('Authentication verified')
+      loggerInstance.success('Authentication verified')
 
       // Step 2: Initialize output directories
-      logger.info('Initializing output directories...')
+      loggerInstance.info('Initializing output directories...')
       const dirResult = await storage.initializeDirectories()
       if (!dirResult.success) {
         throw new Error(dirResult.error)
       }
-      logger.success(`Directories created: ${dirResult.directories.output}`)
+      loggerInstance.success(
+        `Directories created: ${dirResult.directories.output}`
+      )
 
       // Step 3: Discover all posts
-      logger.info(`Discovering posts from ${profileUrl}...`)
+      loggerInstance.info(`Discovering posts from ${profileUrl}...`)
       const discoveryResult = await scraperService.discoverPosts(profileUrl, {
         maxScrollAttempts: options.maxScrollAttempts || 10,
       })
@@ -67,10 +58,10 @@ export const createMediumScraper = (dependencies = {}) => {
       }
 
       const posts = discoveryResult.posts
-      logger.success(`Found ${posts.length} posts to process`)
+      loggerInstance.success(`Found ${posts.length} posts to process`)
 
       if (posts.length === 0) {
-        logger.warn('No posts found to scrape')
+        loggerInstance.warn('No posts found to scrape')
         return {
           success: true,
           postsProcessed: 0,
@@ -88,7 +79,7 @@ export const createMediumScraper = (dependencies = {}) => {
 
       for (const post of posts) {
         processedCount++
-        logger.progress(
+        loggerInstance.progress(
           processedCount,
           posts.length,
           `Processing: ${post.title}`
@@ -136,12 +127,14 @@ export const createMediumScraper = (dependencies = {}) => {
             success: true,
           })
 
-          logger.success(
+          loggerInstance.success(
             `Saved: ${conversionResult.slug} (${saveResult.imagesDownloaded} images)`
           )
         } catch (error) {
           failureCount++
-          logger.error(`Failed to process "${post.title}": ${error.message}`)
+          loggerInstance.error(
+            `Failed to process "${post.title}": ${error.message}`
+          )
 
           results.push({
             url: post.url,
@@ -174,15 +167,17 @@ export const createMediumScraper = (dependencies = {}) => {
 
       // Summary
       const duration = Math.round((Date.now() - startTime) / 1000)
-      logger.success(`Scraping completed in ${duration} seconds`)
-      logger.info(`Results: ${successCount} successful, ${failureCount} failed`)
+      loggerInstance.success(`Scraping completed in ${duration} seconds`)
+      loggerInstance.info(
+        `Results: ${successCount} successful, ${failureCount} failed`
+      )
 
       return {
         success: true,
         ...metadata,
       }
     } catch (error) {
-      logger.error(`Scraping failed: ${error.message}`)
+      loggerInstance.error(`Scraping failed: ${error.message}`)
 
       return {
         success: false,
@@ -195,7 +190,7 @@ export const createMediumScraper = (dependencies = {}) => {
   // Quick summary without full scraping
   const getProfileSummary = async (profileUrl, options = {}) => {
     try {
-      logger.info('Getting profile summary...')
+      loggerInstance.info('Getting profile summary...')
 
       const authStatus = await authService.getAuthStatus()
       if (!authStatus.authenticated) {
@@ -211,11 +206,11 @@ export const createMediumScraper = (dependencies = {}) => {
         throw new Error(summaryResult.error)
       }
 
-      logger.success(`Found ${summaryResult.totalCount} posts`)
+      loggerInstance.success(`Found ${summaryResult.totalCount} posts`)
 
       return summaryResult
     } catch (error) {
-      logger.error(`Failed to get summary: ${error.message}`)
+      loggerInstance.error(`Failed to get summary: ${error.message}`)
       return {
         success: false,
         error: error.message,

@@ -1,5 +1,6 @@
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
+import { withErrorHandling } from './utils.js'
 
 // Factory function for creating HTML to Markdown converter
 const createConverter = (options = {}) => {
@@ -294,75 +295,67 @@ export const createPostConverter = (dependencies = {}) => {
     dependencies.frontmatterGenerator || createFrontmatterGenerator()
 
   // Convert a post's HTML content to markdown with frontmatter
-  const convertPost = async postData => {
-    try {
-      if (!postData || !postData.content) {
-        throw new Error('Post data and content are required')
-      }
-
-      // Generate URL slug from title
-      const slug =
-        postData.title
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '') || 'untitled'
-
-      // Set up title handling for conversion
-      const title = postData.title || 'Untitled'
-      converter.turndownService.expectedTitle = title
-      converter.turndownService.isFirstH1MatchingTitle = true
-
-      // Convert HTML content to markdown
-      const markdown = converter.convertToMarkdown(postData.content)
-
-      // Clean up the flags
-      delete converter.turndownService.expectedTitle
-      delete converter.turndownService.isFirstH1MatchingTitle
-
-      // Extract images that are actually referenced in the markdown
-      const referencedImages = converter.extractReferencedImages(markdown)
-
-      // Generate frontmatter with slug
-      const frontmatter = frontmatterGenerator.generateYamlFrontmatter({
-        ...postData,
-        slug,
-      })
-
-      // Add main title as H1 at the beginning of content (after frontmatter)
-      // But only if the content doesn't already start with the same title as H1
-      const markdownLines = markdown.trim().split('\n')
-      const firstLine = markdownLines[0] || ''
-
-      // Check if content already starts with the same title as H1
-      const alreadyHasTitle =
-        firstLine.startsWith('# ') &&
-        firstLine.slice(2).trim().toLowerCase() === title.toLowerCase()
-
-      const contentWithTitle = alreadyHasTitle
-        ? markdown
-        : `# ${title}\n\n${markdown}`
-
-      // Combine frontmatter and markdown content with H1 title
-      const fullMarkdown = frontmatter + contentWithTitle
-
-      return {
-        success: true,
-        markdown: fullMarkdown,
-        frontmatter,
-        content: contentWithTitle,
-        slug,
-        filename: `${slug}.md`,
-        referencedImages, // Only images actually referenced in markdown
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to convert post: ${error.message}`,
-      }
+  const convertPost = withErrorHandling(async postData => {
+    if (!postData || !postData.content) {
+      throw new Error('Post data and content are required')
     }
-  }
+
+    // Generate URL slug from title
+    const slug =
+      postData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || 'untitled'
+
+    // Set up title handling for conversion
+    const title = postData.title || 'Untitled'
+    converter.turndownService.expectedTitle = title
+    converter.turndownService.isFirstH1MatchingTitle = true
+
+    // Convert HTML content to markdown
+    const markdown = converter.convertToMarkdown(postData.content)
+
+    // Clean up the flags
+    delete converter.turndownService.expectedTitle
+    delete converter.turndownService.isFirstH1MatchingTitle
+
+    // Extract images that are actually referenced in the markdown
+    const referencedImages = converter.extractReferencedImages(markdown)
+
+    // Generate frontmatter with slug
+    const frontmatter = frontmatterGenerator.generateYamlFrontmatter({
+      ...postData,
+      slug,
+    })
+
+    // Add main title as H1 at the beginning of content (after frontmatter)
+    // But only if the content doesn't already start with the same title as H1
+    const markdownLines = markdown.trim().split('\n')
+    const firstLine = markdownLines[0] || ''
+
+    // Check if content already starts with the same title as H1
+    const alreadyHasTitle =
+      firstLine.startsWith('# ') &&
+      firstLine.slice(2).trim().toLowerCase() === title.toLowerCase()
+
+    const contentWithTitle = alreadyHasTitle
+      ? markdown
+      : `# ${title}\n\n${markdown}`
+
+    // Combine frontmatter and markdown content with H1 title
+    const fullMarkdown = frontmatter + contentWithTitle
+
+    return {
+      markdown: fullMarkdown,
+      frontmatter,
+      content: contentWithTitle,
+      slug,
+      filename: `${slug}.md`,
+      referencedImages, // Only images actually referenced in markdown
+    }
+  })
 
   return {
     convertPost,

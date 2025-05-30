@@ -1,8 +1,7 @@
-import { URL } from 'url'
-
 import puppeteer from 'puppeteer'
 
 import { createAuthService } from './auth.js'
+import { urlValidator } from './utils.js'
 
 // Factory function for creating browser launcher
 const createBrowserLauncher = () => ({
@@ -12,73 +11,6 @@ const createBrowserLauncher = () => ({
       ...options,
     })
     return browser
-  },
-})
-
-// Factory function for Medium URL validation
-const createUrlValidator = () => ({
-  isValidMediumProfile: url => {
-    try {
-      const urlObj = new URL(url)
-      return (
-        (urlObj.hostname === 'medium.com' &&
-          urlObj.pathname.startsWith('/@')) ||
-        (urlObj.hostname.endsWith('.medium.com') && urlObj.pathname === '/')
-      )
-    } catch {
-      return false
-    }
-  },
-
-  normalizeProfileUrl: url => {
-    try {
-      const urlObj = new URL(url)
-
-      // Handle username.medium.com format - extract username and convert to medium.com/@username
-      if (
-        urlObj.hostname.endsWith('.medium.com') &&
-        urlObj.hostname !== 'medium.com'
-      ) {
-        const username = urlObj.hostname.split('.')[0]
-        return `https://medium.com/@${username}`
-      }
-
-      // Return original URL if already in medium.com/@username format
-      if (
-        urlObj.hostname === 'medium.com' &&
-        urlObj.pathname.startsWith('/@')
-      ) {
-        return url
-      }
-
-      return null
-    } catch {
-      return null
-    }
-  },
-
-  extractUsername: url => {
-    try {
-      const urlObj = new URL(url)
-
-      // Handle username.medium.com format
-      if (
-        urlObj.hostname.endsWith('.medium.com') &&
-        urlObj.hostname !== 'medium.com'
-      ) {
-        return `@${urlObj.hostname.split('.')[0]}`
-      }
-
-      // Handle medium.com/@username format
-      const pathParts = urlObj.pathname.split('/')
-      if (pathParts.length >= 2 && pathParts[1].startsWith('@')) {
-        return pathParts[1] // includes @
-      }
-
-      return null
-    } catch {
-      return null
-    }
   },
 })
 
@@ -583,7 +515,7 @@ export const createScraperService = (dependencies = {}) => {
   const browserLauncher =
     dependencies.browserLauncher || createBrowserLauncher()
   const authService = dependencies.authService || createAuthService()
-  const urlValidator = dependencies.urlValidator || createUrlValidator()
+  const urlValidatorInstance = dependencies.urlValidator || urlValidator
   const postExtractor = dependencies.postExtractor || createPostExtractor()
   const scrollHandler = dependencies.scrollHandler || createScrollHandler()
 
@@ -606,7 +538,7 @@ export const createScraperService = (dependencies = {}) => {
       }
 
       // Normalize and validate Medium profile URL
-      const normalizedUrl = urlValidator.normalizeProfileUrl(profileUrl)
+      const normalizedUrl = urlValidatorInstance.normalizeProfileUrl(profileUrl)
       if (!normalizedUrl) {
         return {
           success: false,
@@ -617,7 +549,7 @@ export const createScraperService = (dependencies = {}) => {
         }
       }
 
-      const username = urlValidator.extractUsername(normalizedUrl)
+      const username = urlValidatorInstance.extractUsername(normalizedUrl)
 
       // Launch browser
       browser = await browserLauncher.launch({
@@ -990,12 +922,7 @@ export const createScraperService = (dependencies = {}) => {
 }
 
 // Export individual factory functions for testing
-export {
-  createBrowserLauncher,
-  createPostExtractor,
-  createScrollHandler,
-  createUrlValidator,
-}
+export { createBrowserLauncher, createPostExtractor, createScrollHandler }
 
 // Default export for convenience
 export default createScraperService

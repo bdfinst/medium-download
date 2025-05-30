@@ -1,6 +1,7 @@
 import { promises as fs, existsSync } from 'fs'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
+import { withErrorHandling } from './utils.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -104,30 +105,22 @@ export const createStorageService = (dependencies = {}) => {
   const outputDir = dependencies.outputDir || defaultOutputDir
 
   // Save a markdown post with frontmatter in its own directory
-  const savePost = async (postData, markdown) => {
-    try {
-      const slug = postData.slug || 'untitled'
-      const postDir = path.join(outputDir, slug)
-      await fileSystem.ensureDirectory(postDir)
+  const savePost = withErrorHandling(async (postData, markdown) => {
+    const slug = postData.slug || 'untitled'
+    const postDir = path.join(outputDir, slug)
+    await fileSystem.ensureDirectory(postDir)
 
-      const filename = `${slug}.md`
-      const filePath = path.join(postDir, filename)
+    const filename = `${slug}.md`
+    const filePath = path.join(postDir, filename)
 
-      await fileSystem.writeFile(filePath, markdown)
+    await fileSystem.writeFile(filePath, markdown)
 
-      return {
-        success: true,
-        filePath,
-        filename,
-        postDir,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: `Failed to save post: ${error.message}`,
-      }
+    return {
+      filePath,
+      filename,
+      postDir,
     }
-  }
+  })
 
   // Download only images that are referenced in the markdown content to the post's directory
   const downloadPostImages = async (postData, referencedImages = []) => {
