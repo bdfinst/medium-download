@@ -6,11 +6,12 @@
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
-    "test": "jest --passWithNoTests",
-    "test:acceptance": "jest test/acceptance",
-    "test:unit": "jest test/unit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
+    "test:acceptance": "node --experimental-vm-modules node_modules/.bin/jest test/acceptance",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:manual": "node src/manual-test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write src/ test/ features/ *.js *.json *.md",
@@ -20,8 +21,10 @@
   },
   "dependencies": {
     "@eslint/js": "^9.27.0",
+    "dotenv": "^16.5.0",
     "googleapis": "^144.0.0",
     "gray-matter": "^4.0.3",
+    "open": "^10.1.2",
     "puppeteer": "^23.0.0",
     "turndown": "^7.2.0"
   },
