@@ -1,26 +1,35 @@
 {
   "name": "medium-scraper",
   "version": "1.0.0",
-  "type": "module",
   "description": "Scrape Medium blog posts to markdown with frontmatter",
+  "type": "module",
   "main": "src/main.js",
   "scripts": {
+    "format": "prettier --write src/ test/ features/ *.js *.json *.md",
+    "format:check": "prettier --check src/ test/ features/ *.js *.json *.md",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepare": "husky",
+    "quality": "npm run lint:fix && npm run format",
+    "quality:check": "npm run lint && npm run format:check",
     "start": "node src/main.js",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
     "test:acceptance": "node --experimental-vm-modules node_modules/.bin/jest test/acceptance",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit",
-    "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:manual": "node src/manual-test.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write src/ test/ features/ *.js *.json *.md",
-    "format:check": "prettier --check src/ test/ features/ *.js *.json *.md",
-    "quality": "npm run lint:fix && npm run format",
-    "quality:check": "npm run lint && npm run format:check"
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit",
+    "test:watch": "jest --watch"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
-    "@eslint/js": "^9.27.0",
     "dotenv": "^16.5.0",
     "googleapis": "^144.0.0",
     "gray-matter": "^4.0.3",
@@ -31,10 +40,13 @@
     "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.27.0",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.3.0"
   }
 }

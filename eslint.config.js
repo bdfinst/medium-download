@@ -23,7 +23,7 @@ export default [
       },
     },
     rules: {
-      'no-console': 'warn',
+      'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       'prefer-arrow-callback': 'error',

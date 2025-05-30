@@ -1,4 +1,3 @@
-import { createScraperService } from '../../src/scraper.js'
 import { createPostConverter } from '../../src/converter.js'
 
 describe('Integration Tests - Recent Fixes', () => {
@@ -75,9 +74,7 @@ describe('Integration Tests - Recent Fixes', () => {
           !url.includes('medium.com/m/')
         ) {
           const pathParts = cleanUrl.split('/')
-          return (
-            pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
-          )
+          return pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
         }
 
         return false
@@ -127,7 +124,9 @@ describe('Integration Tests - Recent Fixes', () => {
 
       // Should not have duplicate title
       if (
-        result.content.includes('# My Amazing Blog Post\n\n## My Amazing Blog Post')
+        result.content.includes(
+          '# My Amazing Blog Post\n\n## My Amazing Blog Post'
+        )
       ) {
         throw new Error('Title should not be duplicated')
       }

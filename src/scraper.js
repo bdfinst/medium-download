@@ -87,7 +87,7 @@ const createPostExtractor = () => ({
   extractPostsFromPage: async page => {
     try {
       // First, let's debug what elements are available on the page
-      const pageInfo = await page.evaluate(() => {
+      await page.evaluate(() => {
         /* eslint-disable no-undef */
         const articles = document.querySelectorAll('article')
         const divs = document.querySelectorAll('div[data-testid]')
@@ -647,7 +647,6 @@ export const createScraperService = (dependencies = {}) => {
       await new Promise(resolve => setTimeout(resolve, 3000))
 
       // Get page title and basic info for debugging
-      const pageTitle = await page.title()
       const currentUrl = page.url()
 
       // Check if we were redirected or if there's an error
