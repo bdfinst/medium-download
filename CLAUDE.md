@@ -163,27 +163,24 @@ Modular design with separate files for different concerns:
 Use dependency injection patterns and implement proper error handling with functional error types.
 
 ### Dependencies
-Minimal external dependencies. Suggested core packages:
+Core packages required (see SETUP.md for specific versions):
 - `puppeteer` or `@playwright/test` for browser automation
 - `googleapis` for Google OAuth
 - `turndown` for HTML to markdown conversion
 - `gray-matter` for frontmatter handling
-- `node-fetch` for HTTP requests (if needed)
 - `jest` for testing framework with BDD assertions
-- `eslint` for code linting
-- `prettier` for code formatting
-- `eslint-config-prettier` to avoid conflicts between ESLint and Prettier
-- `eslint-plugin-import` for ES module linting
+- `eslint` and `prettier` for code quality
 
 ## Expected Deliverables
 
 ### File Structure
+Expected structure after setup (see SETUP.md for detailed creation instructions):
 ```
 
 medium-scraper/
 ├── features/
 │   └── medium-scraper.feature      # Gherkin specifications (reference only)
-├── src/
+├── src/                           # Application code (you will create)
 │   ├── auth.js
 │   ├── scraper.js
 │   ├── converter.js
@@ -192,23 +189,15 @@ medium-scraper/
 │   ├── logger.js
 │   └── main.js
 ├── test/
-│   ├── acceptance/                 # Jest acceptance tests (BDD style)
-│   │   ├── auth.test.js
-│   │   ├── scraper.test.js
-│   │   ├── converter.test.js
-│   │   └── cli.test.js
-│   └── unit/                      # Jest unit tests
+│   ├── acceptance/                # Jest acceptance tests (you will create)
+│   └── unit/                     # Jest unit tests (you will create)
 ├── output/
 │   ├── posts/
 │   ├── images/
 │   └── metadata.json
 ├── CLAUDE.md                      # This file
-├── .eslintrc.js                   # ESLint configuration
-├── .prettierrc.js                 # Prettier configuration
-├── jest.config.js                 # Jest configuration
-├── config.json
-├── package.json
-└── README.md
+├── SETUP.md                       # Setup instructions
+└── [config files from SETUP.md]   # All .js, .json config files
 
 ```
 
@@ -349,22 +338,13 @@ Create the following test infrastructure:
 
 ### Package.json Scripts
 
-```json
-{
-  "scripts": {
-    "test": "jest",
-    "test:acceptance": "jest test/acceptance",
-    "test:unit": "jest test/unit",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src/ test/ --ext .js",
-    "lint:fix": "eslint src/ test/ --ext .js --fix",
-    "format": "prettier --write src/ test/ features/ *.js *.json *.md",
-    "format:check": "prettier --check src/ test/ features/ *.js *.json *.md",
-    "quality": "npm run lint:fix && npm run format",
-    "quality:check": "npm run lint && npm run format:check"
-  }
-}
+Key scripts available after setup (full configuration in SETUP.md):
+
+```bash
+npm test              # Run all Jest tests
+npm run test:acceptance   # Run acceptance tests only
+npm run quality       # Fix linting and formatting issues
+npm run quality:check # Verify code quality without changes
 ```
 
 ### Jest Configuration
