@@ -25,6 +25,24 @@ Feature: Medium Blog Scraper
         And it should extract the URL for each post
         And it should identify the total number of posts to process
 
+    Scenario: Handle Posts Submitted to Publications
+        Given I have published posts both on my profile and to Medium publications
+        When I navigate to my Medium profile page
+        Then the scraper should identify posts on my profile with URLs like:
+            | URL Format                                    | Description              |
+            | https://username.medium.com/post-title-123    | Personal profile posts   |
+            | https://medium.com/@username/post-title-456   | Personal profile posts   |
+        And the scraper should also identify posts submitted to publications with URLs like:
+            | URL Format                                           | Description                    |
+            | https://publication-name.com/post-title-789          | Custom publication domain      |
+            | https://medium.com/publication-name/post-title-abc   | Medium-hosted publication      |
+        And all posts should be attributed to the correct author
+        And publication information should be captured in metadata
+        When I process publication posts
+        Then the scraper should extract content from the publication URL
+        And it should preserve the original publication context
+        And it should include publication name in the frontmatter metadata
+
     Scenario: Extract Post Content and Metadata
         Given I have a list of Medium post URLs
         When I scrape each individual post

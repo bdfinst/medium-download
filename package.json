@@ -24,9 +24,11 @@
     "dotenv": "^16.5.0",
     "googleapis": "^144.0.0",
     "gray-matter": "^4.0.3",
+    "node-fetch": "^3.3.2",
     "open": "^10.1.2",
     "puppeteer": "^23.0.0",
-    "turndown": "^7.2.0"
+    "turndown": "^7.2.0",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
