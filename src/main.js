@@ -4,6 +4,12 @@ import { createAuthService } from './auth.js'
 import { createScraperService } from './scraper.js'
 import { createPostConverter } from './converter.js'
 import { createStorageService } from './storage.js'
+import { getCurrentConfig } from './config.js'
+import {
+  createErrorAwareOperation,
+  ScraperError,
+  ErrorTypes,
+} from './error-handling.js'
 import { logger } from './utils.js'
 import { config } from 'dotenv'
 
@@ -24,6 +30,10 @@ export const createMediumScraper = (dependencies = {}) => {
 
     try {
       loggerInstance.info('Starting Medium profile scraping...')
+
+      // Load configuration
+      const config = await getCurrentConfig()
+      const incrementalMode = options.incremental || config.resumeEnabled
 
       // Step 1: Validate authentication
       loggerInstance.info('Checking authentication status...')
@@ -57,8 +67,32 @@ export const createMediumScraper = (dependencies = {}) => {
         throw new Error(discoveryResult.error)
       }
 
-      const posts = discoveryResult.posts
+      let posts = discoveryResult.posts
       loggerInstance.success(`Found ${posts.length} posts to process`)
+
+      // Check for incremental mode - only process posts that need updating
+      if (incrementalMode) {
+        loggerInstance.info('Checking for posts that need updating...')
+        const metadataResult = await storage.loadMetadata()
+
+        if (metadataResult.success && metadataResult.metadata) {
+          const postsNeedingUpdate = await storage.getPostsNeedingUpdate(
+            posts,
+            metadataResult.metadata
+          )
+
+          const skippedCount = posts.length - postsNeedingUpdate.length
+          posts = postsNeedingUpdate
+
+          loggerInstance.info(
+            `Incremental mode: ${posts.length} posts need updating, ${skippedCount} skipped`
+          )
+        } else {
+          loggerInstance.info(
+            'No previous metadata found, processing all posts'
+          )
+        }
+      }
 
       if (posts.length === 0) {
         loggerInstance.warn('No posts found to scrape')
@@ -71,11 +105,30 @@ export const createMediumScraper = (dependencies = {}) => {
         }
       }
 
-      // Step 4: Process each post
+      // Step 4: Process each post with error handling
       let processedCount = 0
       let successCount = 0
       let failureCount = 0
+      let skippedCount = 0
       const results = []
+
+      // Create error-aware operation for post processing
+      const errorAwareOperation = createErrorAwareOperation({
+        retry: {
+          maxAttempts: config.retryAttempts || 3,
+          baseDelay: config.requestDelay || 2000,
+        },
+        recovery: {
+          skipPrivatePosts: true,
+          skipDeletedPosts: true,
+          maxConsecutiveFailures: 5,
+          onError: (error, consecutiveFailures) => {
+            loggerInstance.warn(
+              `Error #${consecutiveFailures}: ${error.message}`
+            )
+          },
+        },
+      })
 
       for (const post of posts) {
         processedCount++
@@ -85,21 +138,21 @@ export const createMediumScraper = (dependencies = {}) => {
           `Processing: ${post.title}`
         )
 
-        try {
+        const result = await errorAwareOperation.execute(async () => {
           // Extract detailed content and metadata
           const contentResult = await scraperService.extractPostContent(
             post.url
           )
 
           if (!contentResult.success) {
-            throw new Error(contentResult.error)
+            throw new ScraperError(contentResult.error, ErrorTypes.PARSING)
           }
 
           // Convert HTML to markdown with frontmatter
           const conversionResult = await converter.convertPost(contentResult)
 
           if (!conversionResult.success) {
-            throw new Error(conversionResult.error)
+            throw new ScraperError(conversionResult.error, ErrorTypes.PARSING)
           }
 
           // Save post with images using the new integrated function
@@ -113,40 +166,58 @@ export const createMediumScraper = (dependencies = {}) => {
           )
 
           if (!saveResult.success) {
-            throw new Error(saveResult.error)
+            throw new ScraperError(saveResult.error, ErrorTypes.FILE_SYSTEM)
           }
 
-          successCount++
-          results.push({
+          return {
             url: post.url,
             title: post.title,
             slug: conversionResult.slug,
             filename: saveResult.markdownFile,
             imagesDownloaded: saveResult.imagesDownloaded || 0,
             postDir: saveResult.postDir,
+          }
+        }, `Post: ${post.title}`)
+
+        // Handle the result from error-aware operation
+        if (result.success) {
+          successCount++
+          results.push({
+            ...result.result,
             success: true,
           })
 
           loggerInstance.success(
-            `Saved: ${conversionResult.slug} (${saveResult.imagesDownloaded} images)`
+            `Saved: ${result.result.slug} (${result.result.imagesDownloaded} images)`
           )
-        } catch (error) {
-          failureCount++
-          loggerInstance.error(
-            `Failed to process "${post.title}": ${error.message}`
-          )
-
+        } else if (result.skipped) {
+          skippedCount++
           results.push({
             url: post.url,
             title: post.title,
-            error: error.message,
+            skipped: true,
+            reason: result.error,
             success: false,
           })
+          // No need to log here as error handling already logged the skip
+        } else {
+          failureCount++
+          results.push({
+            url: post.url,
+            title: post.title,
+            error: result.error,
+            success: false,
+          })
+          loggerInstance.error(
+            `Failed to process "${post.title}": ${result.error}`
+          )
         }
 
         // Add delay between requests to be respectful
         if (processedCount < posts.length) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise(resolve =>
+            setTimeout(resolve, config.requestDelay || 2000)
+          )
         }
       }
 
@@ -159,6 +230,7 @@ export const createMediumScraper = (dependencies = {}) => {
         postsProcessed: processedCount,
         postsSuccessful: successCount,
         postsFailed: failureCount,
+        postsSkipped: skippedCount,
         duration: Date.now() - startTime,
         results,
       }
@@ -169,7 +241,7 @@ export const createMediumScraper = (dependencies = {}) => {
       const duration = Math.round((Date.now() - startTime) / 1000)
       loggerInstance.success(`Scraping completed in ${duration} seconds`)
       loggerInstance.info(
-        `Results: ${successCount} successful, ${failureCount} failed`
+        `Results: ${successCount} successful, ${failureCount} failed, ${skippedCount} skipped`
       )
 
       return {
@@ -264,6 +336,19 @@ const runCLI = async () => {
       break
     }
 
+    case 'incremental': {
+      if (!profileUrl) {
+        console.error('❌ Profile URL required')
+        process.exit(1)
+      }
+      const debugMode = args.includes('--debug')
+      await scraper.scrapeProfile(profileUrl, {
+        debug: debugMode,
+        incremental: true,
+      })
+      break
+    }
+
     case 'status': {
       const status = await scraper.auth.getAuthStatus()
       console.log('Authentication Status:', status)
@@ -282,6 +367,9 @@ const runCLI = async () => {
       console.log(
         '  scrape <profile-url>         - Scrape all posts from profile'
       )
+      console.log(
+        '  incremental <profile-url>    - Scrape only new/updated posts'
+      )
       console.log('')
       console.log('Options:')
       console.log(
@@ -291,6 +379,7 @@ const runCLI = async () => {
       console.log('Examples:')
       console.log('  node src/main.js scrape https://medium.com/@username')
       console.log('  node src/main.js scrape https://username.medium.com')
+      console.log('  node src/main.js incremental https://medium.com/@username')
       console.log(
         '  node src/main.js scrape https://medium.com/@username --debug'
       )

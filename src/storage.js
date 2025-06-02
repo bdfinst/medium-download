@@ -214,13 +214,34 @@ export const createStorageService = (dependencies = {}) => {
   const saveMetadata = async metadata => {
     try {
       const metadataPath = path.join(outputDir, 'metadata.json')
-      const metadataContent = JSON.stringify(metadata, null, 2)
 
+      // Add tracking information for incremental updates
+      const enhancedMetadata = {
+        ...metadata,
+        lastScrapedAt: new Date().toISOString(),
+        version: '1.0.0',
+        postHashes: {}, // Will store content hashes for change detection
+      }
+
+      // If we have posts, generate content hashes for each
+      if (metadata.results) {
+        metadata.results.forEach(result => {
+          if (result.success && result.slug) {
+            // Simple hash based on title and URL for change detection
+            const contentSignature = `${result.title || ''}-${result.url || ''}`
+            enhancedMetadata.postHashes[result.slug] =
+              Buffer.from(contentSignature).toString('base64')
+          }
+        })
+      }
+
+      const metadataContent = JSON.stringify(enhancedMetadata, null, 2)
       await fileSystem.writeFile(metadataPath, metadataContent)
 
       return {
         success: true,
         filePath: metadataPath,
+        metadata: enhancedMetadata,
       }
     } catch (error) {
       return {
@@ -277,6 +298,33 @@ export const createStorageService = (dependencies = {}) => {
     }
   }
 
+  // Check if a post needs updating based on metadata comparison
+  const shouldUpdatePost = async (postData, existingMetadata) => {
+    if (!existingMetadata || !existingMetadata.postHashes) {
+      return true // No previous data, so update
+    }
+
+    const slug = postData.slug || 'untitled'
+    const contentSignature = `${postData.title || ''}-${postData.url || ''}`
+    const currentHash = Buffer.from(contentSignature).toString('base64')
+    const previousHash = existingMetadata.postHashes[slug]
+
+    return currentHash !== previousHash
+  }
+
+  // Get posts that need updating for incremental scraping
+  const getPostsNeedingUpdate = async (allPosts, existingMetadata) => {
+    const postsToUpdate = []
+
+    for (const post of allPosts) {
+      if (await shouldUpdatePost(post, existingMetadata)) {
+        postsToUpdate.push(post)
+      }
+    }
+
+    return postsToUpdate
+  }
+
   // Save a complete post with images in its own directory
   const savePostWithImages = async (
     postData,
@@ -325,6 +373,8 @@ export const createStorageService = (dependencies = {}) => {
     saveMetadata,
     loadMetadata,
     initializeDirectories,
+    shouldUpdatePost,
+    getPostsNeedingUpdate,
     outputDir,
   }
 }

@@ -43,18 +43,29 @@ touch features/medium-scraper.feature
     "quality": "npm run lint:fix && npm run format",
     "quality:check": "npm run lint && npm run format:check"
   },
+  "lint-staged": {
+    "*.js": ["eslint --fix", "prettier --write"],
+    "*.{json,md}": ["prettier --write"]
+  },
   "dependencies": {
-    "puppeteer": "^21.0.0",
-    "googleapis": "^126.0.0",
-    "turndown": "^7.1.0",
-    "gray-matter": "^4.0.0"
+    "dotenv": "^16.5.0",
+    "googleapis": "^144.0.0",
+    "gray-matter": "^4.0.3",
+    "node-fetch": "^3.3.2",
+    "open": "^10.1.2",
+    "puppeteer": "^23.0.0",
+    "turndown": "^7.2.0",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
-    "jest": "^29.0.0",
-    "eslint": "^8.0.0",
-    "prettier": "^3.0.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-import": "^2.0.0"
+    "@eslint/js": "^9.27.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.3.0"
   }
 }
 ```
@@ -127,6 +138,9 @@ export default {
 ```bash
 # Install dependencies
 npm install
+
+# Init husky
+echo 'npx lint-staged && npm run quality:check && npm test' > .husky/pre-commit
 
 # Verify Jest works
 npm test

@@ -58,6 +58,7 @@ npm start scrape https://medium.com/@username
    ```
 
 3. **Test the installation:**
+
    ```bash
    npm test
    npm run quality:check
@@ -117,9 +118,11 @@ npm start scrape https://medium.com/@real-username
    Shows how many posts will be downloaded without actually downloading them.
 
 3. **Full scrape:**
+
    ```bash
    npm start scrape https://medium.com/@username
    ```
+
    Downloads all posts and images to the `output/` directory.
 
 ## Output Structure
@@ -152,12 +155,7 @@ date: '2024-01-15T10:30:00Z'
 lastModified: '2024-01-16T14:22:00Z'
 author: 'John Developer'
 tags: ['javascript', 'web-development', 'tutorial']
-readingTime: '7 min read'
-claps: 142
-responses: 8
-mediumUrl: 'https://medium.com/@username/post-slug-123'
 featuredImage: './images/post-slug-featured.jpg'
-canonicalUrl: 'https://medium.com/@username/post-slug-123'
 published: true
 ---
 # How to Build Amazing Web Apps

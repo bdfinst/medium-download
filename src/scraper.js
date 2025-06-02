@@ -2,16 +2,89 @@ import puppeteer from 'puppeteer'
 
 import { createAuthService } from './auth.js'
 import { urlValidator } from './utils.js'
+import {
+  withRetry,
+  classifyHttpError,
+  handleNetworkError,
+  ScraperError,
+  ErrorTypes,
+} from './error-handling.js'
 
 // Factory function for creating browser launcher
 const createBrowserLauncher = () => ({
-  launch: async (options = {}) => {
-    const browser = await puppeteer.launch({
-      headless: true,
+  launch: withRetry(async (options = {}) => {
+    try {
+      const browser = await puppeteer.launch({
+        headless: true,
+        ...options,
+      })
+      return browser
+    } catch (error) {
+      throw new ScraperError(
+        `Failed to launch browser: ${error.message}`,
+        ErrorTypes.NETWORK,
+        null,
+        true
+      )
+    }
+  }),
+})
+
+// Error-aware page navigation
+const navigateToPage = withRetry(async (page, url, options = {}) => {
+  try {
+    const response = await page.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 30000,
       ...options,
     })
-    return browser
-  },
+
+    if (!response) {
+      throw new ScraperError(
+        `No response received for ${url}`,
+        ErrorTypes.NETWORK,
+        null,
+        true
+      )
+    }
+
+    const status = response.status()
+
+    if (status >= 400) {
+      throw classifyHttpError(status, `Failed to load ${url}`, url)
+    }
+
+    return response
+  } catch (error) {
+    if (error.name === 'TimeoutError') {
+      throw new ScraperError(
+        `Timeout loading ${url}`,
+        ErrorTypes.NETWORK,
+        null,
+        true
+      )
+    }
+
+    if (error instanceof ScraperError) {
+      throw error
+    }
+
+    throw handleNetworkError(error)
+  }
+})
+
+// Error-aware page evaluation
+const evaluateWithRetry = withRetry(async (page, pageFunction, ...args) => {
+  try {
+    return await page.evaluate(pageFunction, ...args)
+  } catch (error) {
+    throw new ScraperError(
+      `Page evaluation failed: ${error.message}`,
+      ErrorTypes.PARSING,
+      null,
+      true
+    )
+  }
 })
 
 // Factory function for post extraction logic
@@ -19,7 +92,7 @@ const createPostExtractor = () => ({
   extractPostsFromPage: async page => {
     try {
       // First, let's debug what elements are available on the page
-      await page.evaluate(() => {
+      await evaluateWithRetry(page, () => {
         /* eslint-disable no-undef */
         const articles = document.querySelectorAll('article')
         const divs = document.querySelectorAll('div[data-testid]')
@@ -65,7 +138,7 @@ const createPostExtractor = () => ({
       })
 
       // Try multiple selector strategies to find posts
-      const posts = await page.evaluate(() => {
+      const posts = await evaluateWithRetry(page, () => {
         /* eslint-disable no-undef */
 
         // Helper function to validate if URL is an actual post (not profile/domain)
@@ -330,7 +403,7 @@ const createPostExtractor = () => ({
 
   hasMoreContent: async page => {
     try {
-      const hasMore = await page.evaluate(() => {
+      const hasMore = await evaluateWithRetry(page, () => {
         /* eslint-disable no-undef */
         // Check for explicit end indicators
         const endOfFeed = document.querySelector(
@@ -564,11 +637,8 @@ export const createScraperService = (dependencies = {}) => {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       )
 
-      // Navigate to profile page using normalized URL
-      await page.goto(normalizedUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
-      })
+      // Navigate to profile page using error-aware navigation
+      await navigateToPage(page, normalizedUrl)
 
       console.log(`Looking for posts by user: ${username}`)
 
@@ -778,18 +848,27 @@ export const createScraperService = (dependencies = {}) => {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       )
 
-      await page.goto(postUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
-      })
+      // Navigate to post page using error-aware navigation
+      await navigateToPage(page, postUrl)
 
-      // Wait for main content to load
-      await page.waitForSelector('article, [data-testid="storyContent"]', {
-        timeout: 15000,
-      })
+      // Wait for main content to load with retry logic
+      await withRetry(async () => {
+        try {
+          await page.waitForSelector('article, [data-testid="storyContent"]', {
+            timeout: 15000,
+          })
+        } catch {
+          throw new ScraperError(
+            `Post content not found on ${postUrl}. Page may not have loaded properly.`,
+            ErrorTypes.PARSING,
+            null,
+            true
+          )
+        }
+      })()
 
       // Extract comprehensive post metadata and content
-      const postData = await page.evaluate(() => {
+      const postData = await evaluateWithRetry(page, () => {
         /* eslint-disable no-undef */
         const result = {}
 
@@ -828,13 +907,14 @@ export const createScraperService = (dependencies = {}) => {
             dateElement.textContent.trim()
           : ''
 
-        // Extract tags
+        // Extract tags with comprehensive selectors
         const tagElements = document.querySelectorAll(
-          '[data-testid="tag"], .tag'
+          '[data-testid="tag"], .tag, [data-testid*="tag"], .tags a, .post-tags a, [href*="/tag/"], a[href*="/tag/"]'
         )
         result.tags = Array.from(tagElements)
           .map(tag => tag.textContent.trim())
           .filter(Boolean)
+          .filter(tag => tag.length > 0 && tag.length < 50) // Reasonable tag length
 
         // Extract reading time
         const readingTimeElement = document.querySelector(

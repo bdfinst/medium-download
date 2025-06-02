@@ -1,5 +1,6 @@
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
+
 import { withErrorHandling } from './utils.js'
 
 // Factory function for creating HTML to Markdown converter
@@ -19,6 +20,200 @@ const createConverter = (options = {}) => {
 
   // Add GitHub Flavored Markdown support (tables, strikethrough, etc.)
   turndownService.use(gfm)
+
+  // Filter out specific Medium UI elements
+  turndownService.addRule('filterMediumUI', {
+    filter: node => {
+      const className = node.className || ''
+      const dataModule = node.getAttribute('data-module') || ''
+      const dataTestId = node.getAttribute('data-testid') || ''
+      const text = node.textContent?.toLowerCase().trim() || ''
+      const href = node.href?.toLowerCase() || ''
+
+      // Filter out links to author/byline pages and publication pages
+      if (node.tagName === 'A') {
+        if (
+          href.includes('medium.com/@') ||
+          href.includes('/u/') ||
+          href.includes('/@') ||
+          href.includes('/publication') ||
+          className.includes('author') ||
+          className.includes('byline') ||
+          className.includes('publication') ||
+          dataTestId.includes('author') ||
+          dataTestId.includes('byline') ||
+          dataTestId.includes('publication') ||
+          text.includes('follow') ||
+          text.includes('subscribe')
+        ) {
+          return true
+        }
+
+        // Filter links that are publication names or author links by checking parent context
+        const parent = node.parentElement
+        if (parent && parent.className?.includes('byline')) {
+          return true
+        }
+      }
+
+      // Filter out entire byline containers and their children
+      if (
+        className.includes('byline') ||
+        dataTestId.includes('byline') ||
+        dataModule === 'AuthorByline' ||
+        node.closest?.('[class*="byline"]') ||
+        node.closest?.('[data-testid*="byline"]')
+      ) {
+        return true
+      }
+
+      // Filter out UI elements by class names
+      if (
+        className.includes('clap') ||
+        className.includes('applause') ||
+        className.includes('share') ||
+        className.includes('follow') ||
+        className.includes('listen') ||
+        className.includes('medium-widget') ||
+        className.includes('medium-button') ||
+        className.includes('medium-interaction') ||
+        className.includes('byline') ||
+        className.includes('author-info') ||
+        className.includes('footer') ||
+        className.includes('responses') ||
+        className.includes('post-footer') ||
+        dataModule === 'ArticleFooter' ||
+        dataModule === 'ArticleHeader' ||
+        dataModule === 'ResponsesToPost' ||
+        dataTestId.includes('author') ||
+        dataTestId.includes('byline') ||
+        dataTestId.includes('clap') ||
+        dataTestId.includes('share') ||
+        dataTestId.includes('response')
+      ) {
+        return true
+      }
+
+      // Filter out author signature paragraphs and publication info
+      if (node.tagName === 'P') {
+        if (
+          text.includes('written by') ||
+          text.includes('about the author') ||
+          text.includes('follow me') ||
+          text.includes('connect with me') ||
+          (text.includes(' in ') &&
+            text.length < 30 &&
+            !text.includes('italic')) || // Short "in [Publication]" text, but not our test content
+          text.match(/^.+\s+is a .+ (at|with)/i)
+        ) {
+          return true
+        }
+      }
+
+      // Filter spans that are byline/publication related
+      if (node.tagName === 'SPAN') {
+        if (
+          text === 'in' ||
+          (text.length < 20 &&
+            (text.includes('min read') ||
+              text.includes('dec ') ||
+              text.includes('jan ') ||
+              text.includes('feb ') ||
+              text.includes('mar ') ||
+              text.includes('apr ') ||
+              text.includes('may ') ||
+              text.includes('jun ') ||
+              text.includes('jul ') ||
+              text.includes('aug ') ||
+              text.includes('sep ') ||
+              text.includes('oct ') ||
+              text.includes('nov ') ||
+              /^\d{1,2}\s*(min read|claps?)$/i.test(text)))
+        ) {
+          return true
+        }
+      }
+
+      // Filter divs that contain only byline/metadata
+      if (node.tagName === 'DIV') {
+        if (
+          className.includes('article-meta') ||
+          (text.length < 50 &&
+            (text.includes('min read') ||
+              text.includes(' in ') ||
+              /^\d{1,2}\s*claps?$/i.test(text) ||
+              /^\w{3}\s+\d{1,2},\s+\d{4}$/i.test(text))) // Date format like "Dec 1, 2024"
+        ) {
+          return true
+        }
+      }
+
+      // Check for speechify-ignore elements using preserved data attribute
+      if (node.getAttribute('data-speechify-ignore') === 'true') {
+        return true
+      }
+
+      // Filter simple UI text elements (but not complex content)
+      const hasComplexContent = node.children.length > 0 || text.length > 100
+      if (!hasComplexContent) {
+        const uiPatterns = [
+          /^(sign up|sign in|get started)/i,
+          /^(open in app|get the app)/i,
+          /^(become a member|upgrade)/i,
+          /^(highlight|add note|bookmark)/i,
+          /^(more from .+)/i,
+          /^(recommended from medium)/i,
+          /^\d+\s*min read$/i,
+          /^written by/i,
+          /^follow$/i,
+          /^\d+\s*followers?$/i,
+          /^\d+\s*following$/i,
+          /^\d+\s*(clap|applause|response)s?$/i,
+          /^(clap|share|follow|listen)$/i,
+          /^(about the author)/i,
+          /^in$/i, // Filter standalone "in" words
+        ]
+
+        if (uiPatterns.some(pattern => pattern.test(text))) {
+          return true
+        }
+      }
+
+      // Also filter any text containing UI keywords if it's short and likely UI
+      if (text.length < 50) {
+        if (
+          /👏/.test(text) ||
+          text === 'clap' ||
+          text === 'share' ||
+          text === 'follow' ||
+          text === 'listen' ||
+          text === 'in' || // Filter standalone "in" words
+          text.includes('written by') ||
+          text.includes('about the author') ||
+          text.includes('follow for more') ||
+          text.includes('sign up to continue') ||
+          text.includes('become a member') ||
+          text.includes('related articles') ||
+          text.includes('footer content') ||
+          text.includes('header content') ||
+          text.includes('share this article') ||
+          text.includes('listen to this story') ||
+          text.includes('more articles like this') ||
+          text.includes('clap to show your support') ||
+          text.includes('responses') ||
+          text.includes('see responses') ||
+          text.includes('view responses') ||
+          /\d+\.?\d*k?\s*followers?$/i.test(text) ||
+          /\d+\s*responses?$/i.test(text)
+        ) {
+          return true
+        }
+      }
+
+      return false
+    },
+    replacement: () => '', // Remove these elements entirely
+  })
 
   // Handle header levels - only main title should be H1, downgrade all others
   // This rule will be customized per conversion to handle the first H1 specially
@@ -158,7 +353,16 @@ const createConverter = (options = {}) => {
         // Remove Medium's specific tracking elements
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/data-[^=]*="[^"]*"/g, '') // Remove data attributes
+
+        // Mark speechify-ignore elements before class removal
+        .replace(
+          /<([^>]+)class="[^"]*speechify-ignore[^"]*"([^>]*)>/gi,
+          '<$1data-speechify-ignore="true"$2>'
+        )
+
+      const finalHtml = processedHtml
+        // Remove data attributes except our speechify marker
+        .replace(/data-(?!speechify-ignore)[^=]*="[^"]*"/g, '')
 
         // Convert Medium's custom elements to standard HTML
         .replace(/<mark[^>]*>/g, '<strong>')
@@ -169,7 +373,7 @@ const createConverter = (options = {}) => {
         .replace(/id="[^"]*"/g, '') // Remove id attributes
 
       // Apply markdown conversion
-      let markdown = turndownService.turndown(processedHtml)
+      let markdown = turndownService.turndown(finalHtml)
 
       // Post-process markdown for cleaner output
       markdown = markdown
@@ -202,35 +406,6 @@ const createConverter = (options = {}) => {
 const createFrontmatterGenerator = () => ({
   generateYamlFrontmatter: metadata => {
     try {
-      // Extract publication info from URL if it's a publication post
-      const extractPublicationInfo = url => {
-        if (!url) return null
-
-        // Check for Medium publication format: medium.com/publication-name/
-        const publicationMatch = url.match(/medium\.com\/([^/@][^/]+)\//)
-        if (publicationMatch) {
-          return {
-            name: publicationMatch[1],
-            url: `https://medium.com/${publicationMatch[1]}`,
-          }
-        }
-
-        // Check for custom domain publication: publication.medium.com
-        const customDomainMatch = url.match(/https:\/\/([^.]+)\.medium\.com\//)
-        if (customDomainMatch) {
-          return {
-            name: customDomainMatch[1],
-            url: url.split('/').slice(0, 3).join('/'),
-          }
-        }
-
-        return null
-      }
-
-      const publication = extractPublicationInfo(
-        metadata.mediumUrl || metadata.canonicalUrl
-      )
-
       const frontmatter = {
         title: metadata.title || 'Untitled',
         subtitle: metadata.subtitle || null,
@@ -241,25 +416,14 @@ const createFrontmatterGenerator = () => ({
           new Date().toISOString(),
         author: metadata.author || 'Unknown',
         tags: metadata.tags || [],
-        readingTime: metadata.readingTime || '',
-        claps: metadata.claps || 0,
-        responses: metadata.responses || 0,
-        mediumUrl: metadata.mediumUrl || metadata.canonicalUrl || '',
         featuredImage: metadata.featuredImage
           ? `./images/${metadata.slug}-featured.jpg`
           : '',
-        canonicalUrl: metadata.canonicalUrl || metadata.mediumUrl || '',
         published: true,
-        publication: publication
-          ? {
-              name: publication.name,
-              url: publication.url,
-            }
-          : null,
         ...metadata.customFields,
       }
 
-      // Remove null/empty values
+      // Remove null/empty values (but keep arrays even if empty)
       Object.keys(frontmatter).forEach(key => {
         if (frontmatter[key] === null || frontmatter[key] === '') {
           delete frontmatter[key]
@@ -330,17 +494,21 @@ export const createPostConverter = (dependencies = {}) => {
       slug,
     })
 
-    // Add main title as H1 at the beginning of content (after frontmatter)
-    // But only if the content doesn't already start with the same title as H1
-    const markdownLines = markdown.trim().split('\n')
-    const firstLine = markdownLines[0] || ''
+    // Check if the markdown already contains the title as H1
+    const markdownLines = markdown
+      .trim()
+      .split('\n')
+      .filter(line => line.trim())
 
-    // Check if content already starts with the same title as H1
-    const alreadyHasTitle =
-      firstLine.startsWith('# ') &&
-      firstLine.slice(2).trim().toLowerCase() === title.toLowerCase()
+    // Look for any H1 that matches the title (case-insensitive)
+    const hasMatchingH1 = markdownLines.some(
+      line =>
+        line.startsWith('# ') &&
+        line.slice(2).trim().toLowerCase() === title.toLowerCase()
+    )
 
-    const contentWithTitle = alreadyHasTitle
+    // Only add title if it's not already present as H1
+    const contentWithTitle = hasMatchingH1
       ? markdown
       : `# ${title}\n\n${markdown}`
 
