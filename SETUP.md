@@ -11,11 +11,15 @@ mkdir medium-scraper && cd medium-scraper
 # Create directory structure
 mkdir -p features src test/acceptance test/unit output/posts output/images
 
-# Create configuration files (content below)
-touch package.json jest.config.js .eslintrc.js .prettierrc.js CLAUDE.md
+# Create configuration files
+touch package.json jest.config.js eslint.config.js .prettierrc.js CLAUDE.md features/medium-scraper.feature
 
-# Create feature file
-touch features/medium-scraper.feature
+# Install dependencies (after creating package.json below)
+npm install
+
+# Setup git hooks
+npx husky init
+echo 'npx lint-staged && npm run quality:check && npm test' > .husky/pre-commit
 ```
 
 ## Required Configuration Files
@@ -31,13 +35,13 @@ touch features/medium-scraper.feature
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
-    "test": "jest",
-    "test:acceptance": "jest test/acceptance",
-    "test:unit": "jest test/unit",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src/ test/ --ext .js",
-    "lint:fix": "eslint src/ test/ --ext .js --fix",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
+    "test:acceptance": "npm test test/acceptance",
+    "test:unit": "npm test test/unit",
+    "test:watch": "npm test -- --watch",
+    "test:coverage": "npm test -- --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write src/ test/ features/ *.js *.json *.md",
     "format:check": "prettier --check src/ test/ features/ *.js *.json *.md",
     "quality": "npm run lint:fix && npm run format",
@@ -94,29 +98,61 @@ export default {
 }
 ```
 
-### 3. .eslintrc.js
+### 3. eslint.config.js
 
 ```javascript
-export default {
-  env: {
-    es2022: true,
-    node: true,
-    jest: true,
+import js from '@eslint/js'
+import prettier from 'eslint-config-prettier'
+
+export default [
+  js.configs.recommended,
+  prettier,
+  {
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        global: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setImmediate: 'readonly',
+        clearImmediate: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'prefer-arrow-callback': 'error',
+      'arrow-spacing': 'error',
+      'no-duplicate-imports': 'error',
+      'no-unused-vars': 'error',
+    },
   },
-  extends: ['eslint:recommended', 'prettier'],
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
+  {
+    files: ['test/**/*.js'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        test: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        jest: 'readonly',
+      },
+    },
   },
-  rules: {
-    'no-console': 'off',
-    'prefer-const': 'error',
-    'no-var': 'error',
-    'prefer-arrow-callback': 'error',
-    'arrow-spacing': 'error',
-    'no-duplicate-imports': 'error',
-  },
-}
+]
 ```
 
 ### 4. .prettierrc.js
@@ -133,31 +169,20 @@ export default {
 }
 ```
 
-## Installation & Verification
+## Verification & Final Steps
 
 ```bash
-# Install dependencies
-npm install
-
-# Init husky
-echo 'npx lint-staged && npm run quality:check && npm test' > .husky/pre-commit
-
 # Verify Jest works
 npm test
 
-# Verify ESLint works
-npm run lint
-
-# Verify Prettier works
-npm run format:check
-
-# Verify quality pipeline works
+# Verify linting and formatting
 npm run quality:check
+
+# Final project structure verification
+tree -I 'node_modules|coverage' .
 ```
 
-## Final Project Structure
-
-After setup, your directory should look like:
+## Expected Final Structure
 
 ```
 medium-scraper/
@@ -170,15 +195,17 @@ medium-scraper/
 ├── output/
 │   ├── posts/
 │   └── images/
+├── .husky/
+│   └── pre-commit
 ├── node_modules/
 ├── CLAUDE.md
 ├── package.json
 ├── jest.config.js
-├── .eslintrc.js
+├── eslint.config.js
 ├── .prettierrc.js
 └── package-lock.json
 ```
 
-## Ready for Claude Code
+## Ready for Development
 
 Once setup is complete, Claude Code can begin implementation following the ATDD workflow defined in CLAUDE.md.
