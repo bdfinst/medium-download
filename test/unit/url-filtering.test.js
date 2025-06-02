@@ -112,11 +112,7 @@ describe('URL Filtering - Homepage Detection', () => {
 
           const result = isValidPostUrl(url)
 
-          if (result !== shouldInclude) {
-            throw new Error(
-              `URL "${url}" should be ${shouldInclude ? 'included' : 'excluded'} but got ${result}`
-            )
-          }
+          expect(result).toBe(shouldInclude)
         })
       })
     })

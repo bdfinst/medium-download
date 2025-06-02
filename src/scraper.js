@@ -1,14 +1,14 @@
 import puppeteer from 'puppeteer'
 
 import { createAuthService } from './auth.js'
-import { urlValidator } from './utils.js'
 import {
-  withRetry,
+  ErrorTypes,
+  ScraperError,
   classifyHttpError,
   handleNetworkError,
-  ScraperError,
-  ErrorTypes,
+  withRetry,
 } from './error-handling.js'
+import { urlValidator } from './utils.js'
 
 // Factory function for creating browser launcher
 const createBrowserLauncher = () => ({
@@ -645,11 +645,6 @@ export const createScraperService = (dependencies = {}) => {
       // Navigate to profile page using error-aware navigation
       await navigateToPage(page, normalizedUrl)
 
-      console.log(`Looking for posts by user: ${username}`)
-
-      // Wait for Medium's content to fully load
-      console.log('Waiting for page content to load...')
-
       // Wait for the page to be more fully rendered
       const waitTime = options.fastMode ? 100 : 3000
       await new Promise(resolve => setTimeout(resolve, waitTime))
@@ -763,10 +758,6 @@ export const createScraperService = (dependencies = {}) => {
 
         return isPersonalPost || isPublicationPost
       })
-
-      console.log(
-        `Debug - After filtering for user ${username}: ${userPosts.length} posts`
-      )
 
       return {
         success: true,

@@ -27,36 +27,24 @@ describe('Title Handling - Duplicate Prevention', () => {
       })
 
       it('Then it should not duplicate the title', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         // Count H1 occurrences in the content
         const h1Count = (result.content.match(/^# /gm) || []).length
-        if (h1Count !== 1) {
-          throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-        }
+        expect(h1Count).toBe(1)
 
         // Should not have duplicate title
-        if (
-          result.content.includes(
-            '# My Amazing Blog Post\n\n## My Amazing Blog Post'
-          )
-        ) {
-          throw new Error('Title should not be duplicated')
-        }
+        expect(result.content).not.toContain(
+          '# My Amazing Blog Post\n\n## My Amazing Blog Post'
+        )
       })
 
       it('And the title should remain as H1', () => {
-        if (!result.content.startsWith('# My Amazing Blog Post')) {
-          throw new Error('Content should start with the title as H1')
-        }
+        expect(result.content).toMatch(/^# My Amazing Blog Post/)
       })
 
       it('And original H2 should become H3', () => {
-        if (!result.content.includes('### Section Header')) {
-          throw new Error('Original H2 should be downgraded to H3')
-        }
+        expect(result.content).toContain('### Section Header')
       })
     })
   })
@@ -82,30 +70,18 @@ describe('Title Handling - Duplicate Prevention', () => {
       })
 
       it('Then it should add the title as H1', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
-
-        if (!result.content.startsWith('# My Other Blog Post')) {
-          throw new Error('Content should start with the title as H1')
-        }
+        expect(result.success).toBe(true)
+        expect(result.content).toMatch(/^# My Other Blog Post/)
       })
 
       it('And should have exactly one H1', () => {
         const h1Count = (result.content.match(/^# /gm) || []).length
-        if (h1Count !== 1) {
-          throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-        }
+        expect(h1Count).toBe(1)
       })
 
       it('And original headers should be properly downgraded', () => {
-        if (!result.content.includes('### First Section')) {
-          throw new Error('Original H2 should be downgraded to H3')
-        }
-
-        if (!result.content.includes('#### Subsection')) {
-          throw new Error('Original H3 should be downgraded to H4')
-        }
+        expect(result.content).toContain('### First Section')
+        expect(result.content).toContain('#### Subsection')
       })
     })
   })
@@ -130,30 +106,17 @@ describe('Title Handling - Duplicate Prevention', () => {
       })
 
       it('Then it should add the correct title as H1', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
-
-        if (!result.content.startsWith('# Correct Title From Metadata')) {
-          throw new Error(
-            'Content should start with the correct title from metadata'
-          )
-        }
+        expect(result.success).toBe(true)
+        expect(result.content).toMatch(/^# Correct Title From Metadata/)
       })
 
       it('And should have two H1s (correct title + downgraded wrong title)', () => {
         // The correct title as H1, plus the wrong title downgraded to H2
         const h1Count = (result.content.match(/^# /gm) || []).length
-        if (h1Count !== 1) {
-          throw new Error(
-            `Expected exactly 1 H1 (correct title), found ${h1Count}`
-          )
-        }
+        expect(h1Count).toBe(1)
 
         // The wrong title should be downgraded to H2
-        if (!result.content.includes('## Wrong Title From Content')) {
-          throw new Error('Wrong title from content should be downgraded to H2')
-        }
+        expect(result.content).toContain('## Wrong Title From Content')
       })
     })
   })
@@ -176,15 +139,11 @@ describe('Title Handling - Duplicate Prevention', () => {
       })
 
       it('Then it should recognize the title match despite case differences', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         // Should not duplicate the title since it's the same (case insensitive)
         const h1Count = (result.content.match(/^# /gm) || []).length
-        if (h1Count !== 1) {
-          throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-        }
+        expect(h1Count).toBe(1)
       })
     })
   })

@@ -80,13 +80,9 @@ describe('Integration Tests - Recent Fixes', () => {
         return false
       }
 
-      testCases.forEach(({ url, shouldInclude, description }) => {
+      testCases.forEach(({ url, shouldInclude }) => {
         const result = isValidPostUrl(url)
-        if (result !== shouldInclude) {
-          throw new Error(
-            `${description}: Expected ${shouldInclude} but got ${result} for URL: ${url}`
-          )
-        }
+        expect(result).toBe(shouldInclude)
       })
     })
   })
@@ -112,29 +108,19 @@ describe('Integration Tests - Recent Fixes', () => {
 
       const result = await converter.convertPost(postData)
 
-      if (!result.success) {
-        throw new Error('Expected conversion to succeed')
-      }
+      expect(result.success).toBe(true)
 
       // Count H1 occurrences in the content
       const h1Count = (result.content.match(/^# /gm) || []).length
-      if (h1Count !== 1) {
-        throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-      }
+      expect(h1Count).toBe(1)
 
       // Should not have duplicate title
-      if (
-        result.content.includes(
-          '# My Amazing Blog Post\n\n## My Amazing Blog Post'
-        )
-      ) {
-        throw new Error('Title should not be duplicated')
-      }
+      expect(result.content).not.toContain(
+        '# My Amazing Blog Post\n\n## My Amazing Blog Post'
+      )
 
       // Original H2 should be downgraded to H3
-      if (!result.content.includes('### Section Header')) {
-        throw new Error('Original H2 should be downgraded to H3')
-      }
+      expect(result.content).toContain('### Section Header')
     })
 
     it('should add title as H1 when content does not have title', async () => {
@@ -150,24 +136,15 @@ describe('Integration Tests - Recent Fixes', () => {
 
       const result = await converter.convertPost(postData)
 
-      if (!result.success) {
-        throw new Error('Expected conversion to succeed')
-      }
-
-      if (!result.content.startsWith('# My Other Blog Post')) {
-        throw new Error('Content should start with the title as H1')
-      }
+      expect(result.success).toBe(true)
+      expect(result.content).toMatch(/^# My Other Blog Post/)
 
       // Should have exactly one H1
       const h1Count = (result.content.match(/^# /gm) || []).length
-      if (h1Count !== 1) {
-        throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-      }
+      expect(h1Count).toBe(1)
 
       // Original H2 should be downgraded to H3
-      if (!result.content.includes('### First Section')) {
-        throw new Error('Original H2 should be downgraded to H3')
-      }
+      expect(result.content).toContain('### First Section')
     })
 
     it('should handle case-insensitive title matching', async () => {
@@ -182,15 +159,11 @@ describe('Integration Tests - Recent Fixes', () => {
 
       const result = await converter.convertPost(postData)
 
-      if (!result.success) {
-        throw new Error('Expected conversion to succeed')
-      }
+      expect(result.success).toBe(true)
 
       // Should not duplicate the title since it's the same (case insensitive)
       const h1Count = (result.content.match(/^# /gm) || []).length
-      if (h1Count !== 1) {
-        throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-      }
+      expect(h1Count).toBe(1)
     })
   })
 })

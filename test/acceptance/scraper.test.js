@@ -104,9 +104,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
       beforeEach(async () => {
         // Verify authentication status
         const isAuthenticated = await mockAuthService.isAuthenticated()
-        if (!isAuthenticated) {
-          throw new Error('Authentication required for post discovery')
-        }
+        expect(isAuthenticated).toBe(true)
       })
 
       describe('When I navigate to my Medium profile page', () => {
@@ -218,73 +216,37 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         }, 15000) // 15 second timeout
 
         it('Then the scraper should identify all published posts', () => {
-          if (!discoveryResult.success) {
-            throw new Error('Expected post discovery to succeed')
-          }
-
-          if (!discoveryResult.posts || discoveryResult.posts.length === 0) {
-            throw new Error('Expected to find published posts')
-          }
-
-          // Should find the mocked posts
-          if (discoveryResult.posts.length !== 3) {
-            throw new Error(
-              `Expected 3 posts, found ${discoveryResult.posts.length}`
-            )
-          }
+          expect(discoveryResult.success).toBe(true)
+          expect(discoveryResult.posts).toBeDefined()
+          expect(discoveryResult.posts.length).toBeGreaterThan(0)
+          expect(discoveryResult.posts.length).toBe(3)
         })
 
         it('And it should handle pagination or infinite scroll to load all posts', () => {
           // Verify page navigation occurred
-          if (!mockPage.goto.toHaveBeenCalled()) {
-            throw new Error('Expected page navigation to occur')
-          }
+          expect(mockPage.goto.toHaveBeenCalled()).toBe(true)
 
           // Verify scroll handling was attempted
-          if (!mockPage.evaluate.toHaveBeenCalled()) {
-            throw new Error('Expected infinite scroll handling')
-          }
+          expect(mockPage.evaluate.toHaveBeenCalled()).toBe(true)
 
           // Should have made multiple evaluate calls to check for more content
-          if (mockPage.evaluate.calls.length < 2) {
-            throw new Error('Expected multiple scroll attempts')
-          }
+          expect(mockPage.evaluate.calls.length).toBeGreaterThanOrEqual(2)
         })
 
         it('And it should extract the URL for each post', () => {
           const posts = discoveryResult.posts
 
-          posts.forEach((post, index) => {
-            if (!post.url) {
-              throw new Error(`Post ${index + 1} missing URL`)
-            }
-
-            if (!post.url.includes('medium.com')) {
-              throw new Error(`Post ${index + 1} has invalid URL: ${post.url}`)
-            }
-
-            if (!post.url.includes('@testuser')) {
-              throw new Error(
-                `Post ${index + 1} URL doesn't match user profile`
-              )
-            }
+          posts.forEach(post => {
+            expect(post.url).toBeDefined()
+            expect(post.url).toContain('medium.com')
+            expect(post.url).toContain('@testuser')
           })
         })
 
         it('And it should identify the total number of posts to process', () => {
-          if (typeof discoveryResult.totalCount !== 'number') {
-            throw new Error('Expected totalCount to be a number')
-          }
-
-          if (discoveryResult.totalCount !== 3) {
-            throw new Error(
-              `Expected totalCount to be 3, got ${discoveryResult.totalCount}`
-            )
-          }
-
-          if (discoveryResult.totalCount !== discoveryResult.posts.length) {
-            throw new Error('Total count should match posts array length')
-          }
+          expect(typeof discoveryResult.totalCount).toBe('number')
+          expect(discoveryResult.totalCount).toBe(3)
+          expect(discoveryResult.totalCount).toBe(discoveryResult.posts.length)
         })
       })
     })
@@ -312,13 +274,10 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         })
 
         it('Then it should fail with authentication error', () => {
-          if (discoveryResult.success !== false) {
-            throw new Error('Expected discovery to fail when not authenticated')
-          }
-
-          if (!discoveryResult.error.toLowerCase().includes('authentication')) {
-            throw new Error('Expected authentication-related error message')
-          }
+          expect(discoveryResult.success).toBe(false)
+          expect(discoveryResult.error.toLowerCase()).toContain(
+            'authentication'
+          )
         })
       })
     })
@@ -334,13 +293,8 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         })
 
         it('Then it should fail with URL validation error', () => {
-          if (discoveryResult.success !== false) {
-            throw new Error('Expected discovery to fail with invalid URL')
-          }
-
-          if (!discoveryResult.error.toLowerCase().includes('url')) {
-            throw new Error('Expected URL-related error message')
-          }
+          expect(discoveryResult.success).toBe(false)
+          expect(discoveryResult.error.toLowerCase()).toContain('url')
         })
       })
     })
@@ -357,11 +311,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         })
 
         it('Then it should convert to medium.com/@username format', () => {
-          if (normalizedUrl !== 'https://medium.com/@testuser') {
-            throw new Error(
-              `Expected https://medium.com/@testuser, got ${normalizedUrl}`
-            )
-          }
+          expect(normalizedUrl).toBe('https://medium.com/@testuser')
         })
       })
 
@@ -376,9 +326,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         })
 
         it('Then it should extract the username with @ prefix', () => {
-          if (username !== '@testuser') {
-            throw new Error(`Expected @testuser, got ${username}`)
-          }
+          expect(username).toBe('@testuser')
         })
       })
 
@@ -393,9 +341,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         })
 
         it('Then it should be recognized as a valid Medium profile', () => {
-          if (!isValid) {
-            throw new Error('Expected username.medium.com to be valid')
-          }
+          expect(isValid).toBe(true)
         })
       })
     })
@@ -450,11 +396,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
           const personalPosts = filteredPosts.filter(post =>
             post.url.includes('testuser.medium.com')
           )
-          if (personalPosts.length !== 1) {
-            throw new Error(
-              `Expected 1 personal post, got ${personalPosts.length}`
-            )
-          }
+          expect(personalPosts.length).toBe(1)
         })
 
         it('And it should include publication posts', () => {
@@ -463,23 +405,15 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
               post.url.includes('medium.com/') &&
               !post.url.includes('testuser.medium.com')
           )
-          if (publicationPosts.length !== 2) {
-            throw new Error(
-              `Expected 2 publication posts, got ${publicationPosts.length}`
-            )
-          }
+          expect(publicationPosts.length).toBe(2)
         })
 
         it('And publication posts should have proper URLs', () => {
           const publicationPost = filteredPosts.find(post =>
             post.url.includes('devops-weekly')
           )
-          if (!publicationPost) {
-            throw new Error('Expected to find DevOps Weekly publication post')
-          }
-          if (!publicationPost.url.includes('medium.com/devops-weekly/')) {
-            throw new Error('Expected publication URL format')
-          }
+          expect(publicationPost).toBeDefined()
+          expect(publicationPost.url).toContain('medium.com/devops-weekly/')
         })
       })
     })

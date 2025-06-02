@@ -105,80 +105,46 @@ describe('Feature: Medium Blog Scraper Authentication', () => {
         })
 
         it('Then I should be prompted to authorize with Google', () => {
-          if (!mockOAuthClient.generateAuthUrl.toHaveBeenCalled()) {
-            throw new Error('Expected generateAuthUrl to have been called')
-          }
+          expect(mockOAuthClient.generateAuthUrl.toHaveBeenCalled()).toBe(true)
 
           const calls = mockOAuthClient.generateAuthUrl.calls
-          if (calls.length === 0) {
-            throw new Error(
-              'Expected generateAuthUrl to have been called with options'
-            )
-          }
+          expect(calls.length).toBeGreaterThan(0)
 
           const options = calls[0][0]
-          if (options.access_type !== 'offline') {
-            throw new Error('Expected access_type to be offline')
-          }
-
-          if (
-            !options.scope ||
-            !options.scope.includes('email') ||
-            !options.scope.includes('profile')
-          ) {
-            throw new Error('Expected scope to contain email and profile')
-          }
+          expect(options.access_type).toBe('offline')
+          expect(options.scope).toBeDefined()
+          expect(options.scope).toContain('email')
+          expect(options.scope).toContain('profile')
         })
 
         it('And the application should open my default browser', () => {
-          if (!mockBrowserLauncher.launch.toHaveBeenCalled()) {
-            throw new Error('Expected browser launcher to have been called')
-          }
+          expect(mockBrowserLauncher.launch.toHaveBeenCalled()).toBe(true)
 
           const calls = mockBrowserLauncher.launch.calls
           const url = calls[0][0]
-          if (!url.includes('accounts.google.com')) {
-            throw new Error('Expected browser to open with Google OAuth URL')
-          }
+          expect(url).toContain('accounts.google.com')
         })
 
         it('And I should be redirected to Google OAuth consent screen', () => {
           const generatedUrl = mockOAuthClient.generateAuthUrl()
-          if (!generatedUrl.includes('accounts.google.com')) {
-            throw new Error('Expected URL to contain accounts.google.com')
-          }
-          if (!generatedUrl.includes('oauth/authorize')) {
-            throw new Error('Expected URL to contain oauth/authorize')
-          }
+          expect(generatedUrl).toContain('accounts.google.com')
+          expect(generatedUrl).toContain('oauth/authorize')
         })
 
         it('And after granting permission, I should receive an authentication success message', () => {
-          if (!authResult.success) {
-            throw new Error('Expected authentication to be successful')
-          }
-          if (
-            !authResult.message
-              .toLowerCase()
-              .includes('authentication successful')
-          ) {
-            throw new Error(
-              'Expected success message to mention authentication success'
-            )
-          }
+          expect(authResult.success).toBe(true)
+          expect(authResult.message.toLowerCase()).toContain(
+            'authentication successful'
+          )
         })
 
         it('And the auth tokens should be stored securely for future use', () => {
-          if (!mockTokenStorage.save.toHaveBeenCalled()) {
-            throw new Error('Expected tokens to be saved')
-          }
+          expect(mockTokenStorage.save.toHaveBeenCalled()).toBe(true)
 
           const calls = mockTokenStorage.save.calls
           const tokens = calls[0][0]
-          if (!tokens.access_token || !tokens.refresh_token) {
-            throw new Error(
-              'Expected tokens to contain access_token and refresh_token'
-            )
-          }
+          expect(tokens.access_token).toBeDefined()
+          expect(tokens.refresh_token).toBeDefined()
         })
       })
     })
@@ -211,17 +177,11 @@ describe('Feature: Medium Blog Scraper Authentication', () => {
         })
 
         it('Then it should return true if tokens are valid', () => {
-          if (isAuthenticated !== true) {
-            throw new Error('Expected authentication status to be true')
-          }
+          expect(isAuthenticated).toBe(true)
         })
 
         it('And it should not prompt for new authentication', () => {
-          if (mockBrowserLauncher.launch.toHaveBeenCalled()) {
-            throw new Error(
-              'Expected browser launcher not to be called when already authenticated'
-            )
-          }
+          expect(mockBrowserLauncher.launch.toHaveBeenCalled()).toBe(false)
         })
       })
     })

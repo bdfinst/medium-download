@@ -96,9 +96,7 @@ The end.`
       })
 
       it('Then it should create the post directory', () => {
-        if (!result.success) {
-          throw new Error('Expected save operation to succeed')
-        }
+        expect(result.success).toBe(true)
 
         // Check that ensureDirectory was called for the post directory
         const ensureDirCalls = mockFileSystem.ensureDirectory.calls
@@ -107,16 +105,10 @@ The end.`
             call[0].includes('test-post-slug') && !call[0].includes('images')
         )
 
-        if (!postDirCall) {
-          throw new Error('Expected post directory to be created')
-        }
+        expect(postDirCall).toBeDefined()
 
         const expectedPostDir = path.join(testOutputDir, 'test-post-slug')
-        if (postDirCall[0] !== expectedPostDir) {
-          throw new Error(
-            `Expected post directory ${expectedPostDir}, got ${postDirCall[0]}`
-          )
-        }
+        expect(postDirCall[0]).toBe(expectedPostDir)
       })
 
       it('And it should create the images subdirectory', () => {
@@ -126,20 +118,14 @@ The end.`
           call[0].includes('test-post-slug/images')
         )
 
-        if (!imagesDirCall) {
-          throw new Error('Expected images directory to be created')
-        }
+        expect(imagesDirCall).toBeDefined()
 
         const expectedImagesDir = path.join(
           testOutputDir,
           'test-post-slug',
           'images'
         )
-        if (imagesDirCall[0] !== expectedImagesDir) {
-          throw new Error(
-            `Expected images directory ${expectedImagesDir}, got ${imagesDirCall[0]}`
-          )
-        }
+        expect(imagesDirCall[0]).toBe(expectedImagesDir)
       })
 
       it('And it should save the markdown file in the post directory', () => {
@@ -149,39 +135,27 @@ The end.`
           call[0].endsWith('.md')
         )
 
-        if (!markdownCall) {
-          throw new Error('Expected markdown file to be written')
-        }
+        expect(markdownCall).toBeDefined()
 
         const expectedMarkdownPath = path.join(
           testOutputDir,
           'test-post-slug',
           'test-post-slug.md'
         )
-        if (markdownCall[0] !== expectedMarkdownPath) {
-          throw new Error(
-            `Expected markdown path ${expectedMarkdownPath}, got ${markdownCall[0]}`
-          )
-        }
+        expect(markdownCall[0]).toBe(expectedMarkdownPath)
       })
 
       it('And it should download images to the post images directory', () => {
         // Check that downloadImage was called for each referenced image
         const downloadCalls = mockImageDownloader.downloadImage.calls
 
-        if (downloadCalls.length !== 2) {
-          throw new Error(
-            `Expected 2 image downloads, got ${downloadCalls.length}`
-          )
-        }
+        expect(downloadCalls.length).toBe(2)
 
         // Check featured image path
         const featuredCall = downloadCalls.find(call =>
           call[1].includes('test-post-slug-featured.jpg')
         )
-        if (!featuredCall) {
-          throw new Error('Expected featured image to be downloaded')
-        }
+        expect(featuredCall).toBeDefined()
 
         const expectedFeaturedPath = path.join(
           testOutputDir,
@@ -189,19 +163,13 @@ The end.`
           'images',
           'test-post-slug-featured.jpg'
         )
-        if (featuredCall[1] !== expectedFeaturedPath) {
-          throw new Error(
-            `Expected featured image path ${expectedFeaturedPath}, got ${featuredCall[1]}`
-          )
-        }
+        expect(featuredCall[1]).toBe(expectedFeaturedPath)
 
         // Check content image path
         const contentCall = downloadCalls.find(call =>
           call[1].includes('test-post-slug-02.jpg')
         )
-        if (!contentCall) {
-          throw new Error('Expected content image to be downloaded')
-        }
+        expect(contentCall).toBeDefined()
 
         const expectedContentPath = path.join(
           testOutputDir,
@@ -209,40 +177,22 @@ The end.`
           'images',
           'test-post-slug-02.jpg'
         )
-        if (contentCall[1] !== expectedContentPath) {
-          throw new Error(
-            `Expected content image path ${expectedContentPath}, got ${contentCall[1]}`
-          )
-        }
+        expect(contentCall[1]).toBe(expectedContentPath)
       })
 
       it('And it should return the correct directory structure info', () => {
-        if (!result.success) {
-          throw new Error('Expected operation to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const expectedPostDir = path.join(testOutputDir, 'test-post-slug')
-        if (result.postDir !== expectedPostDir) {
-          throw new Error(
-            `Expected postDir ${expectedPostDir}, got ${result.postDir}`
-          )
-        }
+        expect(result.postDir).toBe(expectedPostDir)
 
         const expectedMarkdownFile = path.join(
           expectedPostDir,
           'test-post-slug.md'
         )
-        if (result.markdownFile !== expectedMarkdownFile) {
-          throw new Error(
-            `Expected markdownFile ${expectedMarkdownFile}, got ${result.markdownFile}`
-          )
-        }
+        expect(result.markdownFile).toBe(expectedMarkdownFile)
 
-        if (result.imagesDownloaded !== 2) {
-          throw new Error(
-            `Expected 2 images downloaded, got ${result.imagesDownloaded}`
-          )
-        }
+        expect(result.imagesDownloaded).toBe(2)
       })
     })
   })
@@ -258,17 +208,11 @@ The end.`
         }
 
         // This test documents the expected structure
-        if (!expectedStructure.postDir.includes(slug)) {
-          throw new Error('Post directory should contain the slug')
-        }
-
-        if (!expectedStructure.markdownFile.endsWith(`${slug}.md`)) {
-          throw new Error('Markdown file should be named after the slug')
-        }
-
-        if (!expectedStructure.imagesDir.endsWith('images')) {
-          throw new Error('Images should be in an images subdirectory')
-        }
+        expect(expectedStructure.postDir).toContain(slug)
+        expect(expectedStructure.markdownFile).toMatch(
+          new RegExp(`${slug}.md$`)
+        )
+        expect(expectedStructure.imagesDir).toMatch(/images$/)
       })
 
       it('And each post should be completely self-contained', () => {
@@ -291,15 +235,8 @@ The end.`
             file.includes(`${slug}/images/`)
           )
 
-          if (!hasMarkdown) {
-            throw new Error(
-              `Each post should have its own markdown file: ${slug}.md`
-            )
-          }
-
-          if (!hasImages) {
-            throw new Error(`Each post should have its own images directory`)
-          }
+          expect(hasMarkdown).toBe(true)
+          expect(hasImages).toBe(true)
         })
       })
     })

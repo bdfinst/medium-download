@@ -34,72 +34,44 @@ describe('Header Level Handling', () => {
       })
 
       it('Then the main title should be the only H1', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const h1Count = (result.markdown.match(/^# /gm) || []).length
-        if (h1Count !== 1) {
-          throw new Error(`Expected exactly 1 H1, found ${h1Count}`)
-        }
-
-        if (!result.markdown.includes('# Main Article Title')) {
-          throw new Error('Expected main title to be H1')
-        }
+        expect(h1Count).toBe(1)
+        expect(result.markdown).toContain('# Main Article Title')
       })
 
       it('And all original headers should be downgraded by one level', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const markdown = result.markdown
 
         // Original H1 should become H2
-        if (!markdown.includes('## This should become H2')) {
-          throw new Error('Original H1 should become H2')
-        }
+        expect(markdown).toContain('## This should become H2')
 
         // Original H2 should become H3
-        if (!markdown.includes('### This should become H3')) {
-          throw new Error('Original H2 should become H3')
-        }
+        expect(markdown).toContain('### This should become H3')
 
         // Original H3 should become H4
-        if (!markdown.includes('#### This should become H4')) {
-          throw new Error('Original H3 should become H4')
-        }
+        expect(markdown).toContain('#### This should become H4')
 
         // Original H4 should become H5
-        if (!markdown.includes('##### This should become H5')) {
-          throw new Error('Original H4 should become H5')
-        }
+        expect(markdown).toContain('##### This should become H5')
 
         // Original H5 should become H6
-        if (!markdown.includes('###### This should become H6')) {
-          throw new Error('Original H5 should become H6')
-        }
+        expect(markdown).toContain('###### This should become H6')
 
         // Original H6 should stay H6 (max level)
-        if (!markdown.includes('###### This should stay H6')) {
-          throw new Error('Original H6 should stay H6')
-        }
+        expect(markdown).toContain('###### This should stay H6')
       })
 
       it('And the content structure should be preserved', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const markdown = result.markdown
 
-        if (!markdown.includes('Some content after H1.')) {
-          throw new Error('Content after headers should be preserved')
-        }
-
-        if (!markdown.includes('Content after H2.')) {
-          throw new Error('Content after headers should be preserved')
-        }
+        expect(markdown).toContain('Some content after H1.')
+        expect(markdown).toContain('Content after H2.')
       })
     })
   })
@@ -139,71 +111,48 @@ describe('Image Reference Extraction', () => {
       })
 
       it('Then it should extract only valid HTTP(S) image URLs', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const images = result.referencedImages
-        if (!Array.isArray(images)) {
-          throw new Error('Expected referencedImages to be an array')
-        }
+        expect(Array.isArray(images)).toBe(true)
 
         // Should find 2 valid images (image1.jpg and image2.png)
-        if (images.length !== 2) {
-          throw new Error(
-            `Expected 2 referenced images, found ${images.length}`
-          )
-        }
+        expect(images.length).toBe(2)
 
         const imageSrcs = images.map(img => img.src)
-        if (!imageSrcs.includes('https://example.com/image1.jpg')) {
-          throw new Error('Should include first image')
-        }
-
-        if (!imageSrcs.includes('https://example.com/image2.png')) {
-          throw new Error('Should include figure image')
-        }
+        expect(imageSrcs).toContain('https://example.com/image1.jpg')
+        expect(imageSrcs).toContain('https://example.com/image2.png')
       })
 
       it('And it should exclude data URLs and relative paths', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const images = result.referencedImages
         const imageSrcs = images.map(img => img.src)
 
         // Should not include data URLs
         const hasDataUrl = imageSrcs.some(src => src.startsWith('data:'))
-        if (hasDataUrl) {
-          throw new Error('Should not include data URLs')
-        }
+        expect(hasDataUrl).toBe(false)
 
         // Should not include relative paths
         const hasRelativePath = imageSrcs.some(
           src => src.startsWith('/') || !src.includes('://')
         )
-        if (hasRelativePath) {
-          throw new Error('Should not include relative paths')
-        }
+        expect(hasRelativePath).toBe(false)
       })
 
       it('And it should preserve alt text for images', () => {
-        if (!result.success) {
-          throw new Error('Expected conversion to succeed')
-        }
+        expect(result.success).toBe(true)
 
         const images = result.referencedImages
         const firstImage = images.find(img => img.src.includes('image1.jpg'))
         const figureImage = images.find(img => img.src.includes('image2.png'))
 
-        if (!firstImage || firstImage.alt !== 'First Image') {
-          throw new Error('Should preserve alt text for first image')
-        }
+        expect(firstImage).toBeDefined()
+        expect(firstImage.alt).toBe('First Image')
 
-        if (!figureImage || figureImage.alt !== 'Figure Image') {
-          throw new Error('Should preserve alt text for figure image')
-        }
+        expect(figureImage).toBeDefined()
+        expect(figureImage.alt).toBe('Figure Image')
       })
     })
   })
@@ -235,35 +184,23 @@ And a relative path:
       })
 
       it('Then it should find only HTTP(S) URLs', () => {
-        if (!Array.isArray(images)) {
-          throw new Error('Expected images to be an array')
-        }
-
-        if (images.length !== 2) {
-          throw new Error(`Expected 2 images, found ${images.length}`)
-        }
+        expect(Array.isArray(images)).toBe(true)
+        expect(images.length).toBe(2)
 
         const imageSrcs = images.map(img => img.src)
-        if (!imageSrcs.includes('https://example.com/image1.jpg')) {
-          throw new Error('Should include first image')
-        }
-
-        if (!imageSrcs.includes('https://example.com/image2.png')) {
-          throw new Error('Should include second image')
-        }
+        expect(imageSrcs).toContain('https://example.com/image1.jpg')
+        expect(imageSrcs).toContain('https://example.com/image2.png')
       })
 
       it('And it should preserve alt text', () => {
         const firstImage = images.find(img => img.src.includes('image1.jpg'))
         const secondImage = images.find(img => img.src.includes('image2.png'))
 
-        if (!firstImage || firstImage.alt !== 'First Image') {
-          throw new Error('Should preserve first image alt text')
-        }
+        expect(firstImage).toBeDefined()
+        expect(firstImage.alt).toBe('First Image')
 
-        if (!secondImage || secondImage.alt !== 'Second Image') {
-          throw new Error('Should preserve second image alt text')
-        }
+        expect(secondImage).toBeDefined()
+        expect(secondImage.alt).toBe('Second Image')
       })
     })
   })
