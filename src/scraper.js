@@ -458,7 +458,7 @@ const createPostExtractor = () => ({
 
 // Factory function for scroll handling
 const createScrollHandler = () => ({
-  scrollToLoadMore: async page => {
+  scrollToLoadMore: async (page, options = {}) => {
     try {
       // Get current page height and post count before scrolling
       const beforeState = await page.evaluate(() => {
@@ -497,7 +497,8 @@ const createScrollHandler = () => ({
             /* eslint-enable no-undef */
           })
 
-          await new Promise(resolve => setTimeout(resolve, 3500))
+          const delayTime = options.fastMode ? 50 : 3500
+          await new Promise(resolve => setTimeout(resolve, delayTime))
         } else if (strategy === 1) {
           // Strategy 2: Jump to bottom and trigger events
           await page.evaluate(() => {
@@ -510,7 +511,8 @@ const createScrollHandler = () => ({
             /* eslint-enable no-undef */
           })
 
-          await new Promise(resolve => setTimeout(resolve, 4000))
+          const delayTime2 = options.fastMode ? 50 : 4000
+          await new Promise(resolve => setTimeout(resolve, delayTime2))
         } else {
           // Strategy 3: Multiple small scrolls with pauses
           await page.evaluate(() => {
@@ -529,7 +531,8 @@ const createScrollHandler = () => ({
             /* eslint-enable no-undef */
           })
 
-          await new Promise(resolve => setTimeout(resolve, 5000))
+          const delayTime3 = options.fastMode ? 50 : 5000
+          await new Promise(resolve => setTimeout(resolve, delayTime3))
         }
 
         // Check for new content after each strategy
@@ -563,7 +566,8 @@ const createScrollHandler = () => ({
         )
         for (const button of loadMoreButtons) {
           await button.click()
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          const buttonClickDelay = options.fastMode ? 10 : 2000
+          await new Promise(resolve => setTimeout(resolve, buttonClickDelay))
         }
       } catch (error) {
         console.error(
@@ -573,7 +577,8 @@ const createScrollHandler = () => ({
       }
 
       // Final wait for any async content loading
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const finalDelay = options.fastMode ? 10 : 2000
+      await new Promise(resolve => setTimeout(resolve, finalDelay))
 
       return true
     } catch (error) {
@@ -646,7 +651,8 @@ export const createScraperService = (dependencies = {}) => {
       console.log('Waiting for page content to load...')
 
       // Wait for the page to be more fully rendered
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      const waitTime = options.fastMode ? 100 : 3000
+      await new Promise(resolve => setTimeout(resolve, waitTime))
 
       // Get page title and basic info for debugging
       const currentUrl = page.url()
@@ -660,6 +666,7 @@ export const createScraperService = (dependencies = {}) => {
 
       // Wait for content to load - try multiple selectors with longer timeout
       try {
+        const waitTimeout = options.fastMode ? 1000 : 20000
         await page.waitForFunction(
           () => {
             /* eslint-disable no-undef */
@@ -670,7 +677,7 @@ export const createScraperService = (dependencies = {}) => {
             )
             /* eslint-enable no-undef */
           },
-          { timeout: 20000 }
+          { timeout: waitTimeout }
         )
       } catch (error) {
         console.error(error)
@@ -722,7 +729,7 @@ export const createScraperService = (dependencies = {}) => {
           break
         }
 
-        await scrollHandler.scrollToLoadMore(page)
+        await scrollHandler.scrollToLoadMore(page, options)
         attempts++
       }
 

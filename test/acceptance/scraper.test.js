@@ -54,7 +54,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
     beforeEach(() => {
       // Mock Puppeteer page
       mockPage = {
-        goto: createMockFn(Promise.resolve()),
+        goto: createMockFn(Promise.resolve({ status: () => 200 })),
         waitForSelector: createMockFn(Promise.resolve()),
         evaluate: createMockFn(Promise.resolve()),
         $$eval: createMockFn(Promise.resolve([])),
@@ -109,18 +109,18 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         }
       })
 
-      describe.skip('When I navigate to my Medium profile page', () => {
+      describe('When I navigate to my Medium profile page', () => {
         let discoveryResult
 
         beforeEach(async () => {
           // Mock setUserAgent
           mockPage.setUserAgent = createMockFn(Promise.resolve())
 
-          // Mock waitForSelector
+          // Mock waitForSelector - return quickly
           mockPage.waitForSelector = createMockFn(Promise.resolve())
 
-          // Mock waitForFunction
-          mockPage.waitForFunction = createMockFn(Promise.resolve())
+          // Mock waitForFunction - return quickly for test mode
+          mockPage.waitForFunction = createMockFn(Promise.resolve(true))
 
           // Mock title and url methods
           mockPage.title = createMockFn(Promise.resolve('Test User - Medium'))
@@ -209,9 +209,13 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
 
           discoveryResult = await scraperModule.discoverPosts(
             'https://medium.com/@testuser',
-            { maxScrollAttempts: 2 } // Reduce scroll attempts for faster testing
+            {
+              maxScrollAttempts: 2, // Reduce scroll attempts for faster testing
+              debug: false, // Disable debug screenshots
+              fastMode: true, // Enable fast mode for testing
+            }
           )
-        }, 10000) // 10 second timeout
+        }, 15000) // 15 second timeout
 
         it('Then the scraper should identify all published posts', () => {
           if (!discoveryResult.success) {
