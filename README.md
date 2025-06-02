@@ -9,7 +9,7 @@ A Node.js application that scrapes all published blog posts from a Medium profil
 - 🔄 **URL Format Support** - Works with both `medium.com/@username` and `username.medium.com` formats
 - 📝 **Markdown Conversion** - Converts HTML content to clean markdown with frontmatter
 - 🖼️ **Image Download** - Downloads and organizes all images locally
-- 📊 **Rich Metadata** - Captures titles, dates, tags, reading time, claps, and more
+- 📊 **Rich Metadata** - Captures titles, dates, tags, authors, and more
 - 🏗️ **Organized Output** - Creates structured directory layout for posts and images
 - ⚡ **Respectful Scraping** - Includes delays and proper user agents
 
@@ -82,6 +82,9 @@ npm start summary <profile-url>
 
 # Scrape all posts from a profile (full download)
 npm start scrape <profile-url>
+
+# Scrape only new/updated posts (incremental mode)
+npm start incremental <profile-url>
 ```
 
 ### Supported URL Formats
@@ -125,21 +128,30 @@ npm start scrape https://medium.com/@real-username
 
    Downloads all posts and images to the `output/` directory.
 
+4. **Incremental updates:**
+
+   ```bash
+   npm start incremental https://medium.com/@username
+   ```
+
+   Downloads only new or updated posts since the last scrape.
+
 ## Output Structure
 
-The scraper creates an organized directory structure:
+The scraper creates an organized directory structure with each post in its own folder:
 
 ```
 output/
-├── posts/
+├── post-title-slug/
 │   ├── post-title-slug.md
+│   └── images/
+│       ├── post-title-slug-featured.jpg
+│       ├── post-title-slug-01.jpg
+│       └── post-title-slug-02.png
+├── another-post-slug/
 │   ├── another-post-slug.md
-│   └── ...
-├── images/
-│   ├── post-title-slug-featured.jpg
-│   ├── post-title-slug-01.jpg
-│   ├── post-title-slug-02.png
-│   └── ...
+│   └── images/
+│       └── another-post-slug-featured.jpg
 └── metadata.json
 ```
 
@@ -155,14 +167,14 @@ date: '2024-01-15T10:30:00Z'
 lastModified: '2024-01-16T14:22:00Z'
 author: 'John Developer'
 tags: ['javascript', 'web-development', 'tutorial']
-featuredImage: './images/post-slug-featured.jpg'
+featuredImage: './images/how-to-build-amazing-web-apps-featured.jpg'
 published: true
 ---
 # How to Build Amazing Web Apps
 
 Post content in clean markdown format...
 
-![Local Image](./images/post-slug-01.jpg)
+![Local Image](./images/how-to-build-amazing-web-apps-01.jpg)
 *Caption preserved from original*
 ```
 
@@ -198,13 +210,13 @@ GOOGLE_REDIRECT_URI=http://localhost:8080/oauth/callback
 
 ### Environment Variables
 
-| Variable               | Description                | Required |
-| ---------------------- | -------------------------- | -------- |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID     | Yes      |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes      |
-| `GOOGLE_REDIRECT_URI`  | OAuth redirect URI         | Yes      |
-| `OUTPUT_DIR`           | Custom output directory    | No       |
-| `MAX_SCROLL_ATTEMPTS`  | Max pagination attempts    | No       |
+| Variable               | Description                | Required | Default                              |
+| ---------------------- | -------------------------- | -------- | ------------------------------------ |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID     | Yes      | -                                    |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Yes      | -                                    |
+| `GOOGLE_REDIRECT_URI`  | OAuth redirect URI         | Yes      | http://localhost:8080/oauth/callback |
+| `OUTPUT_DIR`           | Custom output directory    | No       | ./output                             |
+| `MAX_SCROLL_ATTEMPTS`  | Max pagination attempts    | No       | 20                                   |
 
 ### Customization Options
 
@@ -214,7 +226,9 @@ You can customize the scraping behavior by modifying the options in `src/main.js
 const result = await scraper.scrapeProfile(profileUrl, {
   maxScrollAttempts: 10, // How many times to scroll for more posts
   headless: true, // Run browser in headless mode
-  delay: 2000, // Delay between requests (ms)
+  fastMode: false, // Enable fast mode for testing (reduces delays)
+  debug: false, // Enable debug mode with screenshots and logging
+  incremental: false, // Only download new/updated posts
 })
 ```
 
@@ -228,6 +242,9 @@ src/
 ├── scraper.js       # Medium content extraction
 ├── converter.js     # HTML to markdown conversion
 ├── storage.js       # File system operations
+├── config.js        # Configuration management
+├── utils.js         # Utility functions and logging
+├── error-handling.js # Error handling and retry logic
 └── main.js          # CLI interface and orchestration
 
 test/
@@ -343,7 +360,17 @@ const result = await scraper.scrapeProfile('https://medium.com/@username', {
   maxScrollAttempts: 5,
 })
 
-console.log(`Scraped ${result.postsSuccessful} posts successfully`)
+console.log(`Scraped ${result.postsProcessed} posts successfully`)
+
+// Incremental scrape
+const incrementalResult = await scraper.scrapeProfile(
+  'https://medium.com/@username',
+  {
+    incremental: true,
+  }
+)
+
+console.log(`Updated ${incrementalResult.postsProcessed} posts`)
 ```
 
 ## Limitations
