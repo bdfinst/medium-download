@@ -17,19 +17,15 @@ Build a Node.js application that scrapes all published blog posts from a user's 
 npm test
 
 # 2. ALWAYS run quality checks - NO EXCEPTIONS
-npm run quality:check
-
-# 3. If quality check fails, fix with:
 npm run quality
 ```
 
 ### Workflow Enforcement Rules
 
-1. **NEVER proceed to the next task** until both `npm test` and `npm run quality:check` pass
-2. **NEVER commit code** that doesn't pass both test and quality checks
-3. **NEVER skip this workflow** - even for "small changes" or "quick fixes"
-4. **ALWAYS run the full test suite** - no selective testing
-5. **ALWAYS verify quality standards** - no exceptions for any file type
+1. **NEVER proceed to the next task** until both `npm test` and `npm run quality` pass
+2. **NEVER skip this workflow** - even for "small changes" or "quick fixes"
+3. **ALWAYS run the full test suite** - no selective testing
+4. **ALWAYS verify quality standards** - no exceptions for any file type
 
 ### Quality Gates - ALL Must Pass
 
@@ -117,8 +113,16 @@ This tool solves the problem of exporting Medium blog posts when:
 - **MANDATORY**: Implement functional programming patterns throughout
 - **MANDATORY**: Use arrow functions exclusively for function definitions
 - **MANDATORY**: Avoid classes - use factory functions and closures instead
-- Implement pure functions where possible
-- Use composition over inheritance
+- **NO SEMICOLONS** (enforced by Prettier configuration)
+- Single quotes for strings
+- 2-space indentation
+- 80-character line limit
+- Trailing commas in ES5 contexts
+- No unused variables
+- Prefer const over let
+- No var declarations
+- Consistent arrow function spacing
+- No duplicate imports
 
 ### Architecture
 
@@ -204,7 +208,7 @@ Post content in clean markdown...
 
 ## Implementation Process - ATDD Workflow
 
-Follow this Acceptance Test Driven Development workflow with integrated code quality:
+Follow this Acceptance Test Driven Development workflow:
 
 ### 1. Scenario Analysis
 
@@ -222,14 +226,7 @@ For each feature in `features/medium-scraper.feature`:
 - Use Jest's built-in BDD assertions (expect().toBe(), expect().toHaveBeenCalled(), etc.)
 - Run the acceptance test (it should fail initially)
 - Implement just enough application code to make the test pass
-- **After test passes, run code quality checks and fix any issues**:
-
-  ```bash
-  npm run lint:fix     # Run ESLint and auto-fix issues
-  npm run format       # Run Prettier to format code
-  npm run quality      # Run both linting and formatting
-  ```
-
+- **After test passes, run quality checks**: `npm run quality`
 - Refactor while keeping tests green and code quality high
 
 ### 3. Validation
@@ -239,27 +236,18 @@ For each feature in `features/medium-scraper.feature`:
 - Verify edge cases mentioned in the feature scenarios
 - Confirm the implementation matches the expected behavior exactly
 
-### Example Workflow
+### 4. Continuous Validation Commands
 
 ```bash
-# 1. Read Gherkin scenario "Initial Google OAuth Authentication"
-# 2. Write Jest BDD test in test/acceptance/auth.test.js
-# 3. Run specific test to see it fail
+# Run specific test by name pattern
 npm test -- --testNamePattern="Initial Google OAuth Authentication"
 
-# 4. Implement auth.js functionality to satisfy the test
+# Run related tests to ensure no regression
+npm test -- --testPathPattern="auth"
 
-# 5. Run test again to see it pass
-npm test -- --testNamePattern="Initial Google OAuth Authentication"
-
-# 6. CRITICAL: Run code quality checks and fix any issues
-npm run quality
-
-# 7. Move to next scenario only after code quality is validated
-npm test -- --testNamePattern="Discover All Published Posts"
+# Run all tests and quality checks before moving to next phase
+npm test && npm run quality
 ```
-
-**IMPORTANT**: After every passing test, you MUST run `npm run quality` to ensure code follows the style guidelines before proceeding to the next scenario.
 
 ## Key Features to Implement (Based on Feature File)
 
@@ -319,18 +307,6 @@ describe('Google OAuth Authentication', () => {
         expect(authPrompt).toHaveBeenCalled()
       })
 
-      it('should open my default browser', async () => {
-        // Test implementation
-        expect(browserLauncher).toHaveBeenCalledWith(
-          expect.stringContaining('oauth')
-        )
-      })
-
-      it('should redirect to Google OAuth consent screen', async () => {
-        // Test implementation
-        expect(response.url).toContain('accounts.google.com')
-      })
-
       it('should store auth tokens securely after granting permission', async () => {
         // Test implementation
         expect(tokenStorage.save).toHaveBeenCalledWith(
@@ -384,16 +360,6 @@ describe('Feature: Authentication', () => {
 4. **Reference the feature file continuously** during implementation
 5. **Validate behavior** matches the Gherkin scenarios exactly
 
-Implementation order (based on feature file scenario order):
-
-1. Authentication flow scenarios
-2. Content discovery scenarios
-3. Content processing scenarios
-4. Error handling scenarios
-5. Advanced operational scenarios
-
-## Quality Requirements
-
 All implementation must:
 
 - **Satisfy the acceptance criteria** in the feature file scenarios
@@ -402,54 +368,5 @@ All implementation must:
 - Provide clear progress feedback as specified in scenarios
 - Handle all edge cases mentioned in the feature scenarios
 - Pass both unit and acceptance tests
-
-## Continuous Validation
-
-After implementing each scenario:
-
-```bash
-# Run specific test by name pattern
-npm test -- --testNamePattern="Initial Google OAuth Authentication"
-
-# MANDATORY: Run code quality checks after test passes
-npm run quality
-
-# Run related tests to ensure no regression
-npm test -- --testPathPattern="auth"
-
-# Run all tests and quality checks before moving to next phase
-npm test && npm run quality:check
-```
-
-## Code Quality Standards
-
-All code must adhere to these standards enforced by ESLint and Prettier:
-
-### Style Requirements
-
-- **NO SEMICOLONS** (enforced by Prettier configuration)
-- Single quotes for strings
-- Arrow functions exclusively
-- 2-space indentation
-- 80-character line limit
-- Trailing commas in ES5 contexts
-
-### Code Quality Rules
-
-- No unused variables
-- Prefer const over let
-- No var declarations
-- Consistent arrow function spacing
-- No duplicate imports
-- Functional programming patterns
-
-### Quality Gates
-
-Every scenario implementation must pass:
-
-1. ✅ Acceptance test passes
-2. ✅ ESLint passes with no errors/warnings
-3. ✅ Prettier formatting is applied
-4. ✅ Code follows functional programming constraints
 
 **NO EXCEPTIONS**: Code that doesn't pass quality checks cannot proceed to the next scenario.
