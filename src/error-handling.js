@@ -1,5 +1,6 @@
 // Error handling utilities for Medium scraper
 import { logger } from './utils.js'
+import { Result } from './utils/functional.js'
 
 // Error types for better categorization
 export const ErrorTypes = {
@@ -359,6 +360,181 @@ export const createErrorAwareOperation = (config = {}) => {
   }
 }
 
+// Centralized error handling using Result types and functional patterns
+export const createErrorHandlingService = (config = {}) => {
+  const defaultConfig = {
+    logErrors: true,
+    throwOnCritical: true,
+    enableRetry: true,
+    retryConfig: defaultRetryConfig,
+  }
+
+  const finalConfig = { ...defaultConfig, ...config }
+
+  // Result-based error handling operations
+  const safeAsync = async (operation, context = '') => {
+    try {
+      const result = await operation()
+      return Result.ok(result)
+    } catch (error) {
+      if (finalConfig.logErrors) {
+        logger.error(`${context}: ${error.message}`)
+      }
+
+      if (error instanceof ScraperError && finalConfig.throwOnCritical) {
+        throw error
+      }
+
+      return Result.error(error)
+    }
+  }
+
+  const safeAsyncWithRetry = async (operation, context = '') => {
+    if (!finalConfig.enableRetry) {
+      return safeAsync(operation, context)
+    }
+
+    try {
+      const result = await withRetry(operation, finalConfig.retryConfig)()
+      return Result.ok(result)
+    } catch (error) {
+      if (finalConfig.logErrors) {
+        logger.error(`${context} (with retry): ${error.message}`)
+      }
+      return Result.error(error)
+    }
+  }
+
+  const safe = (operation, context = '') => {
+    try {
+      const result = operation()
+      return Result.ok(result)
+    } catch (error) {
+      if (finalConfig.logErrors) {
+        logger.error(`${context}: ${error.message}`)
+      }
+      return Result.error(error)
+    }
+  }
+
+  const classifyError = error => {
+    if (error instanceof ScraperError) {
+      return error
+    }
+
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNRESET') {
+      return handleNetworkError(error)
+    }
+
+    if (error.name === 'TimeoutError') {
+      return new ScraperError(
+        `Operation timed out: ${error.message}`,
+        ErrorTypes.NETWORK,
+        null,
+        true
+      )
+    }
+
+    return new ScraperError(
+      error.message || 'Unknown error',
+      ErrorTypes.PARSING,
+      null,
+      false
+    )
+  }
+
+  const handleWithRecovery = async (operation, context = '', recovery = {}) => {
+    const {
+      skipOnNotFound = true,
+      skipOnForbidden = true,
+      fallbackValue = null,
+    } = recovery
+
+    const result = await safeAsyncWithRetry(operation, context)
+
+    return result.fold(
+      error => {
+        const classified = classifyError(error)
+
+        if (skipOnNotFound && classified instanceof NotFoundError) {
+          logger.warn(`${context}: Content not found - skipping`)
+          return Result.ok(fallbackValue)
+        }
+
+        if (skipOnForbidden && classified instanceof ForbiddenError) {
+          logger.warn(`${context}: Access forbidden - skipping`)
+          return Result.ok(fallbackValue)
+        }
+
+        return Result.error(classified)
+      },
+      value => Result.ok(value)
+    )
+  }
+
+  const batchProcess = async (items, processor, options = {}) => {
+    const {
+      concurrency = 1,
+      stopOnError = false,
+      context = 'Batch processing',
+    } = options
+
+    const results = []
+    const errors = []
+
+    if (concurrency === 1) {
+      // Sequential processing
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        const itemContext = `${context} [${i + 1}/${items.length}]`
+
+        const result = await safeAsyncWithRetry(
+          () => processor(item, i),
+          itemContext
+        )
+
+        result.fold(
+          error => {
+            errors.push({ item, index: i, error })
+            if (stopOnError) {
+              return Result.error(
+                new ScraperError(
+                  `Batch processing stopped at item ${i + 1}: ${error.message}`,
+                  ErrorTypes.PARSING,
+                  null,
+                  false
+                )
+              )
+            }
+          },
+          value => results.push({ item, index: i, result: value })
+        )
+      }
+    } else {
+      // Concurrent processing (for future enhancement)
+      throw new Error('Concurrent processing not yet implemented')
+    }
+
+    return Result.ok({
+      results,
+      errors,
+      totalProcessed: items.length,
+      successful: results.length,
+      failed: errors.length,
+    })
+  }
+
+  return {
+    safe,
+    safeAsync,
+    safeAsyncWithRetry,
+    classifyError,
+    handleWithRecovery,
+    batchProcess,
+    createOperation: createErrorAwareOperation,
+  }
+}
+
 export default {
   withRetry,
   classifyHttpError,
@@ -366,6 +542,7 @@ export default {
   handleGracefully,
   createErrorRecovery,
   createErrorAwareOperation,
+  createErrorHandlingService,
   ErrorTypes,
   ScraperError,
   RateLimitError,

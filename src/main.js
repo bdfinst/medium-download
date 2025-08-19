@@ -11,6 +11,7 @@ import {
   ErrorTypes,
 } from './error-handling.js'
 import { logger } from './utils.js'
+import { createScrapingPipeline, createSafePipeline } from './main/pipeline.js'
 import { config } from 'dotenv'
 
 // Load environment variables
@@ -24,8 +25,34 @@ export const createMediumScraper = (dependencies = {}) => {
   const storage = dependencies.storage || createStorageService()
   const loggerInstance = dependencies.logger || logger
 
-  // Main scraping workflow
+  // Create the functional pipeline
+  const pipeline = createScrapingPipeline({
+    authService,
+    scraperService,
+    converter,
+    storage,
+    logger: loggerInstance,
+  })
+
+  const safePipeline = createSafePipeline(pipeline, loggerInstance)
+
+  // Main scraping workflow - now uses functional pipeline
   const scrapeProfile = async (profileUrl, options = {}) => {
+    const context = {
+      profileUrl,
+      options: {
+        incremental: false,
+        maxScrollAttempts: 10,
+        debug: false,
+        ...options,
+      },
+    }
+
+    return safePipeline(context)
+  }
+
+  // Legacy workflow for backwards compatibility
+  const scrapeProfileLegacy = async (profileUrl, options = {}) => {
     const startTime = Date.now()
 
     try {
@@ -292,6 +319,7 @@ export const createMediumScraper = (dependencies = {}) => {
 
   return {
     scrapeProfile,
+    scrapeProfileLegacy, // Keep legacy function for backwards compatibility
     getProfileSummary,
     auth: authService,
     scraper: scraperService,

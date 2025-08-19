@@ -87,375 +87,6 @@ const evaluateWithRetry = withRetry(async (page, pageFunction, ...args) => {
   }
 })
 
-// Factory function for post extraction logic
-const createPostExtractor = () => ({
-  extractPostsFromPage: async page => {
-    try {
-      // First, let's debug what elements are available on the page
-      await evaluateWithRetry(page, () => {
-        /* eslint-disable no-undef */
-        const articles = document.querySelectorAll('article')
-        const divs = document.querySelectorAll('div[data-testid]')
-        const mediumLinks = document.querySelectorAll('a[href*="/@"]')
-        const subdomainLinks = document.querySelectorAll(
-          'a[href*=".medium.com"]'
-        )
-        const allLinks = document.querySelectorAll('a[href]')
-
-        // Look specifically for potential post URLs
-        const potentialPostLinks = Array.from(allLinks).filter(link => {
-          const href = link.href
-          return (
-            href.includes('medium.com') &&
-            (href.includes('redirect=') ||
-              href.includes('actionUrl=') ||
-              href.match(/[a-f0-9]{12}/) || // 12-char hex string common in Medium post IDs
-              href.includes('source=user_profile'))
-          )
-        })
-
-        return {
-          articleCount: articles.length,
-          testIdDivs: Array.from(divs).map(div =>
-            div.getAttribute('data-testid')
-          ),
-          mediumLinkCount: mediumLinks.length,
-          subdomainLinkCount: subdomainLinks.length,
-          totalLinkCount: allLinks.length,
-          potentialPostLinks: potentialPostLinks.slice(0, 5).map(link => ({
-            href: link.href,
-            text: link.textContent?.trim()?.substring(0, 50),
-          })),
-          firstFewLinks: Array.from(allLinks)
-            .slice(0, 10)
-            .map(link => ({
-              href: link.href,
-              text: link.textContent?.trim()?.substring(0, 50),
-            }))
-            .filter(link => link.href.includes('medium.com')),
-        }
-        /* eslint-enable no-undef */
-      })
-
-      // Try multiple selector strategies to find posts
-      const posts = await evaluateWithRetry(page, () => {
-        /* eslint-disable no-undef */
-
-        // Helper function to validate if URL is an actual post (not profile/domain)
-        const isValidPostUrl = url => {
-          if (!url) return false
-
-          // Remove query parameters and fragments for cleaner checking
-          const cleanUrl = url.split('?')[0].split('#')[0]
-
-          // Exclude profile homepages explicitly
-          if (cleanUrl.match(/^https?:\/\/[^/]+\.medium\.com\/?$/)) {
-            return false // This is just the homepage: username.medium.com/
-          }
-          if (cleanUrl.match(/^https?:\/\/medium\.com\/@[^/]+\/?$/)) {
-            return false // This is just the profile: medium.com/@username/
-          }
-
-          // Personal profile posts: medium.com/@username/post-title
-          if (url.includes('/@')) {
-            const pathParts = cleanUrl.split('/')
-            // Must have username and post slug
-            return (
-              pathParts.length >= 5 && pathParts[4] && pathParts[4].length > 0
-            )
-          }
-
-          // Subdomain posts: username.medium.com/post-title (but not just the domain)
-          if (url.includes('.medium.com')) {
-            const pathParts = cleanUrl.split('/')
-            return (
-              pathParts.length > 3 &&
-              !cleanUrl.endsWith('.medium.com/') &&
-              !cleanUrl.endsWith('.medium.com') &&
-              pathParts[3] !== '' &&
-              pathParts[3].length > 8 // Post slugs are typically longer
-            )
-          }
-
-          // Publication posts: medium.com/publication/post-title
-          if (
-            url.includes('medium.com/') &&
-            !url.includes('medium.com/@') &&
-            !url.includes('medium.com/m/')
-          ) {
-            const pathParts = cleanUrl.split('/')
-            return (
-              pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
-            )
-          }
-
-          return false
-        }
-
-        const extractedPosts = []
-
-        // Strategy 1: Traditional article elements
-        const articles = document.querySelectorAll('article')
-        articles.forEach(article => {
-          const titleElement = article.querySelector(
-            'h1, h2, h3, [data-testid*="title"], .h4, .h5'
-          )
-          const linkElement = article.querySelector(
-            'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
-          )
-          const dateElement = article.querySelector(
-            'time, [datetime], .date, [data-testid*="date"]'
-          )
-
-          if (titleElement && linkElement) {
-            const url = linkElement.href
-            if (isValidPostUrl(url)) {
-              extractedPosts.push({
-                title: titleElement.textContent?.trim() || 'Untitled',
-                url,
-                publishDate:
-                  dateElement?.textContent?.trim() ||
-                  dateElement?.getAttribute('datetime') ||
-                  null,
-                source: 'article',
-              })
-            }
-          }
-        })
-
-        // Strategy 2: Direct link-based extraction (including publication posts)
-        const profileLinks = document.querySelectorAll(
-          'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
-        )
-        profileLinks.forEach(link => {
-          if (isValidPostUrl(link.href)) {
-            // Find associated title (look in parent containers)
-            let titleElement = null
-            const container = link.closest('div, article, section')
-            if (container) {
-              titleElement = container.querySelector(
-                'h1, h2, h3, h4, h5, [data-testid*="title"]'
-              )
-            }
-
-            if (!titleElement) {
-              titleElement = link.querySelector('h1, h2, h3, h4, h5')
-            }
-
-            if (titleElement || link.textContent?.trim()) {
-              const title =
-                titleElement?.textContent?.trim() ||
-                link.textContent?.trim() ||
-                'Untitled'
-              // Avoid duplicate posts
-              if (!extractedPosts.some(post => post.url === link.href)) {
-                extractedPosts.push({
-                  title,
-                  url: link.href,
-                  publishDate: null,
-                  source: 'link',
-                })
-              }
-            }
-          }
-        })
-
-        // Strategy 3: Look for Medium's newer data structures
-        const postContainers = document.querySelectorAll(
-          '[data-testid*="post"], [data-testid*="story"], .postArticle, .streamItem'
-        )
-        postContainers.forEach(container => {
-          const titleElement = container.querySelector(
-            'h1, h2, h3, h4, [data-testid*="title"], .graf--title'
-          )
-          const linkElement = container.querySelector(
-            'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
-          )
-          const dateElement = container.querySelector(
-            'time, [datetime], .readingTime'
-          )
-
-          if (titleElement && linkElement) {
-            const url = linkElement.href
-            if (isValidPostUrl(url)) {
-              if (!extractedPosts.some(post => post.url === url)) {
-                extractedPosts.push({
-                  title: titleElement.textContent?.trim() || 'Untitled',
-                  url,
-                  publishDate:
-                    dateElement?.textContent?.trim() ||
-                    dateElement?.getAttribute('datetime') ||
-                    null,
-                  source: 'container',
-                })
-              }
-            }
-          }
-        })
-
-        // Strategy 4: Comprehensive link search for wrapped/encoded URLs
-        const allPageLinks = document.querySelectorAll('a[href]')
-        allPageLinks.forEach(link => {
-          const href = link.href
-
-          // Look for URLs that might contain post references
-          if (
-            href.includes('medium.com') &&
-            (href.includes('redirect=') ||
-              href.includes('actionUrl=') ||
-              href.match(/[a-f0-9]{12}/))
-          ) {
-            // Extract title from the link text or nearby elements
-            let title = link.textContent?.trim() || ''
-
-            // If link has no text, look in parent elements
-            if (!title || title.length < 5) {
-              const container = link.closest('article, div, section')
-              if (container) {
-                const titleElement = container.querySelector(
-                  'h1, h2, h3, h4, h5, [data-testid*="title"]'
-                )
-                if (titleElement) {
-                  title = titleElement.textContent?.trim() || 'Untitled'
-                }
-              }
-            }
-
-            // Only include if we have a meaningful title and haven't seen this URL
-            if (
-              title &&
-              title.length > 5 &&
-              !extractedPosts.some(post => post.url === href)
-            ) {
-              extractedPosts.push({
-                title,
-                url: href,
-                publishDate: null,
-                source: 'comprehensive',
-              })
-            }
-          }
-        })
-
-        // Clean up URLs to extract actual post URLs from signin/redirect URLs
-        const cleanedPosts = extractedPosts
-          .map(post => {
-            let cleanUrl = post.url
-
-            // Extract the actual URL from signin redirect parameters
-            if (cleanUrl.includes('signin') && cleanUrl.includes('redirect=')) {
-              const urlParams = new URLSearchParams(cleanUrl.split('?')[1])
-              const redirectUrl = urlParams.get('redirect')
-              if (redirectUrl) {
-                cleanUrl = decodeURIComponent(redirectUrl)
-              }
-            }
-
-            // Extract actual URL from actionUrl parameters (bookmark URLs)
-            if (cleanUrl.includes('actionUrl=')) {
-              const urlParams = new URLSearchParams(cleanUrl.split('?')[1])
-              const actionUrl = urlParams.get('actionUrl')
-              if (actionUrl) {
-                cleanUrl = decodeURIComponent(actionUrl)
-              }
-            }
-
-            return {
-              ...post,
-              url: cleanUrl,
-              originalUrl: post.url,
-            }
-          })
-          .filter(post => {
-            // Filter out non-post URLs
-            const url = post.url.toLowerCase()
-            return (
-              !url.includes('/m/signin') &&
-              !url.includes('/search') &&
-              !url.includes('/followers') &&
-              !url.includes('/about') &&
-              !url.includes('privacy-policy') &&
-              !url.includes('sitemap') &&
-              // Use the same validation as our helper function
-              isValidPostUrl(post.url)
-            )
-          })
-
-        return cleanedPosts
-        /* eslint-enable no-undef */
-      })
-
-      console.log(`Extracted ${posts.length} posts`)
-
-      return posts.filter(
-        post =>
-          post.url &&
-          (post.url.includes('/@') ||
-            post.url.includes('.medium.com') ||
-            (post.url.includes('medium.com/') &&
-              !post.url.includes('medium.com/m/') &&
-              !post.url.includes('medium.com/@')))
-      )
-    } catch (error) {
-      throw new Error(`Failed to extract posts: ${error.message}`)
-    }
-  },
-
-  hasMoreContent: async page => {
-    try {
-      const hasMore = await evaluateWithRetry(page, () => {
-        /* eslint-disable no-undef */
-        // Check for explicit end indicators
-        const endOfFeed = document.querySelector(
-          '[data-testid="end-of-feed"], .end-of-feed'
-        )
-        if (endOfFeed) return false
-
-        // Check for "no more posts" type messages
-        const noMoreText = document.querySelector('*')?.textContent || ''
-        if (
-          noMoreText.includes('No more posts') ||
-          noMoreText.includes('End of results')
-        ) {
-          return false
-        }
-
-        // Check scroll position - be more lenient about what constitutes "more content"
-        const documentHeight = document.documentElement.scrollHeight
-        const windowHeight = window.innerHeight
-        const scrollTop =
-          window.pageYOffset || document.documentElement.scrollTop
-        const scrollableRemaining = documentHeight - (scrollTop + windowHeight)
-
-        // If there's significant content below, definitely more to load
-        if (scrollableRemaining > 500) return true
-
-        // Check for loading indicators
-        const loadingIndicators = document.querySelectorAll(
-          '[data-testid="loading"], .loading, [aria-label*="loading"], [role="progressbar"], .spinner'
-        )
-
-        // Check for "Load more" or "Show more" buttons
-        const loadMoreButtons = document.querySelectorAll(
-          'button[aria-label*="more"], button[aria-label*="load"], [data-testid*="load-more"]'
-        )
-
-        // Be more aggressive - assume there's more content unless we're sure there isn't
-        return (
-          loadingIndicators.length > 0 ||
-          loadMoreButtons.length > 0 ||
-          scrollableRemaining > 50
-        )
-        /* eslint-enable no-undef */
-      })
-
-      return hasMore
-    } catch {
-      return true // Default to true to be more aggressive
-    }
-  },
-})
-
 // Factory function for scroll handling
 const createScrollHandler = () => ({
   scrollToLoadMore: async (page, options = {}) => {
@@ -588,13 +219,226 @@ const createScrollHandler = () => ({
   },
 })
 
+// Refactored post extraction logic using composable strategies
+const createPostExtractionService = () => {
+  return {
+    extractPostsFromPage: async page => {
+      try {
+        // Debug page structure (optional - can be removed in production)
+        await evaluateWithRetry(page, () => {
+          /* eslint-disable no-undef */
+          const articles = document.querySelectorAll('article')
+          const divs = document.querySelectorAll('div[data-testid]')
+          const mediumLinks = document.querySelectorAll('a[href*="/@"]')
+          const subdomainLinks = document.querySelectorAll(
+            'a[href*=".medium.com"]'
+          )
+          const allLinks = document.querySelectorAll('a[href]')
+
+          return {
+            articleCount: articles.length,
+            testIdDivs: Array.from(divs).map(div =>
+              div.getAttribute('data-testid')
+            ),
+            mediumLinkCount: mediumLinks.length,
+            subdomainLinkCount: subdomainLinks.length,
+            totalLinkCount: allLinks.length,
+          }
+          /* eslint-enable no-undef */
+        })
+
+        // Extract posts using composed strategies
+        const posts = await evaluateWithRetry(page, () => {
+          /* eslint-disable no-undef */
+          // Simplified URL validator for browser context
+          const isValidUrl = url => {
+            if (!url) return false
+            const cleanUrl = url.split('?')[0].split('#')[0]
+
+            // Exclude profile homepages
+            if (cleanUrl.match(/^https?:\/\/[^/]+\.medium\.com\/?$/))
+              return false
+            if (cleanUrl.match(/^https?:\/\/medium\.com\/@[^/]+\/?$/))
+              return false
+
+            // Check for valid post paths
+            if (url.includes('/@')) {
+              const pathParts = cleanUrl.split('/')
+              return (
+                pathParts.length >= 5 && pathParts[4] && pathParts[4].length > 0
+              )
+            }
+
+            if (url.includes('.medium.com')) {
+              const pathParts = cleanUrl.split('/')
+              return (
+                pathParts.length > 3 && pathParts[3] && pathParts[3].length > 8
+              )
+            }
+
+            if (
+              url.includes('medium.com/') &&
+              !url.includes('medium.com/@') &&
+              !url.includes('medium.com/m/')
+            ) {
+              const pathParts = cleanUrl.split('/')
+              return (
+                pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
+              )
+            }
+
+            return false
+          }
+
+          const postsMap = new Map()
+
+          // Strategy 1: Article elements
+          const articles = document.querySelectorAll('article')
+          articles.forEach(article => {
+            const titleElement = article.querySelector(
+              'h1, h2, h3, [data-testid*="title"], .h4, .h5'
+            )
+            const linkElement = article.querySelector(
+              'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
+            )
+            const dateElement = article.querySelector(
+              'time, [datetime], .date, [data-testid*="date"]'
+            )
+
+            if (titleElement && linkElement && isValidUrl(linkElement.href)) {
+              postsMap.set(linkElement.href, {
+                title: titleElement.textContent?.trim() || 'Untitled',
+                url: linkElement.href,
+                publishDate:
+                  dateElement?.textContent?.trim() ||
+                  dateElement?.getAttribute('datetime') ||
+                  null,
+                source: 'article',
+              })
+            }
+          })
+
+          // Strategy 2: Link-based extraction
+          const links = document.querySelectorAll(
+            'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
+          )
+          links.forEach(link => {
+            if (isValidUrl(link.href) && !postsMap.has(link.href)) {
+              const container = link.closest('div, article, section')
+              let titleElement = container?.querySelector(
+                'h1, h2, h3, h4, h5, [data-testid*="title"]'
+              )
+              if (!titleElement)
+                titleElement = link.querySelector('h1, h2, h3, h4, h5')
+
+              const title =
+                titleElement?.textContent?.trim() || link.textContent?.trim()
+              if (title && title.length > 3) {
+                postsMap.set(link.href, {
+                  title: title || 'Untitled',
+                  url: link.href,
+                  publishDate: null,
+                  source: 'link',
+                })
+              }
+            }
+          })
+
+          // Strategy 3: Container-based extraction
+          const containers = document.querySelectorAll(
+            '[data-testid*="post"], [data-testid*="story"], .postArticle, .streamItem'
+          )
+          containers.forEach(container => {
+            const titleElement = container.querySelector(
+              'h1, h2, h3, h4, [data-testid*="title"], .graf--title'
+            )
+            const linkElement = container.querySelector(
+              'a[href*="/@"], a[href*=".medium.com"], a[href*="medium.com/"]'
+            )
+            const dateElement = container.querySelector(
+              'time, [datetime], .readingTime'
+            )
+
+            if (
+              titleElement &&
+              linkElement &&
+              isValidUrl(linkElement.href) &&
+              !postsMap.has(linkElement.href)
+            ) {
+              postsMap.set(linkElement.href, {
+                title: titleElement.textContent?.trim() || 'Untitled',
+                url: linkElement.href,
+                publishDate:
+                  dateElement?.textContent?.trim() ||
+                  dateElement?.getAttribute('datetime') ||
+                  null,
+                source: 'container',
+              })
+            }
+          })
+
+          return Array.from(postsMap.values())
+          /* eslint-enable no-undef */
+        })
+
+        console.log(`Extracted ${posts.length} posts`)
+        return posts
+      } catch (error) {
+        throw new Error(`Failed to extract posts: ${error.message}`)
+      }
+    },
+
+    hasMoreContent: async page => {
+      try {
+        const hasMore = await evaluateWithRetry(page, () => {
+          /* eslint-disable no-undef */
+          // Check for explicit end indicators
+          const endOfFeed = document.querySelector(
+            '[data-testid="end-of-feed"], .end-of-feed'
+          )
+          if (endOfFeed) return false
+
+          // Check for "no more posts" type messages
+          const noMoreText = document.querySelector('*')?.textContent || ''
+          if (
+            noMoreText.includes('No more posts') ||
+            noMoreText.includes("You've reached the end")
+          ) {
+            return false
+          }
+
+          // Check scroll position
+          const currentScrollY = window.scrollY
+          const documentHeight = document.documentElement.scrollHeight
+          const windowHeight = window.innerHeight
+          const nearBottom =
+            currentScrollY + windowHeight >= documentHeight - 500
+
+          // Check for loading indicators
+          const loadingIndicators = document.querySelectorAll(
+            '[data-testid*="loading"], .loading, .spinner'
+          )
+
+          return !(nearBottom && loadingIndicators.length === 0)
+          /* eslint-enable no-undef */
+        })
+
+        return hasMore
+      } catch {
+        return true // Default to true to be more aggressive
+      }
+    },
+  }
+}
+
 // Main factory function for scraper service
 export const createScraperService = (dependencies = {}) => {
   const browserLauncher =
     dependencies.browserLauncher || createBrowserLauncher()
   const authService = dependencies.authService || createAuthService()
   const urlValidatorInstance = dependencies.urlValidator || urlValidator
-  const postExtractor = dependencies.postExtractor || createPostExtractor()
+  const postExtractor =
+    dependencies.postExtractor || createPostExtractionService()
   const scrollHandler = dependencies.scrollHandler || createScrollHandler()
 
   // Discover all posts from a Medium profile
@@ -1000,7 +844,11 @@ export const createScraperService = (dependencies = {}) => {
 }
 
 // Export individual factory functions for testing
-export { createBrowserLauncher, createPostExtractor, createScrollHandler }
+export {
+  createBrowserLauncher,
+  createPostExtractionService,
+  createScrollHandler,
+}
 
 // Default export for convenience
 export default createScraperService
