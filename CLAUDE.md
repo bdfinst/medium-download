@@ -1,372 +1,232 @@
-# Medium Blog Scraper
+# Claude Code Assistant Instructions - Medium Blog Scraper
 
-Build a Node.js application that scrapes all published blog posts from a user's Medium profile and downloads them as markdown files with frontmatter metadata.
+## 🤖 AI Context & Project Overview
 
-## Setup Instructions
+You are assisting with a Node.js Medium blog scraper that downloads posts as markdown files. This project uses **Acceptance Test Driven Development (ATDD)** with Jest and functional programming patterns.
 
-**CRITICAL**: Before starting implementation, follow the complete project setup process outlined in SETUP.md
+### Key Project Files
 
-## 🚨 MANDATORY WORKFLOW - NO EXCEPTIONS 🚨
+- `features/medium-scraper.feature` - Gherkin scenarios defining all requirements
+- `test/acceptance/` - Jest BDD tests translating scenarios
+- `SETUP.md` - Initial project setup instructions
 
-**CRITICAL**: After EVERY single code change, you MUST run both test and quality scripts. This is NON-NEGOTIABLE.
+## 🎯 Primary Objectives
 
-### Required Commands After Every Change
+1. **Follow ATDD workflow strictly** - Read scenarios → Write tests → Implement → Validate
+2. **Enforce quality gates** - Run `npm test` and `npm run quality` after EVERY change
+3. **Use functional programming** - No classes, only arrow functions and pure functions
+4. **Maintain BDD test structure** - Tests must mirror Given/When/Then scenarios
+
+## ⚡ Quick Command Reference
 
 ```bash
-# 1. ALWAYS run tests first - NO EXCEPTIONS
-npm test
+# Essential commands - Run after EVERY change
+npm test                    # Run all tests
+npm run quality            # Check code quality
 
-# 2. ALWAYS run quality checks - NO EXCEPTIONS
+# Development commands
+npm test -- --watch        # Watch mode for TDD
+npm test -- --testNamePattern="<pattern>"  # Run specific test
+npm test -- --testPathPattern="<path>"     # Run tests in path
+```
+
+## 🚨 CRITICAL RULES - NO EXCEPTIONS
+
+### After Every Code Change
+
+1. ✅ Run `npm test` - ALL tests must pass
+2. ✅ Run `npm run quality` - NO linting/formatting errors
+3. ✅ Fix any failures before proceeding
+4. ✅ Never skip for "small changes"
+
+### Code Style Mandates
+
+- **ES Modules only** - Use import/export syntax
+- **Arrow functions only** - No function declarations
+- **No classes** - Use factory functions and closures
+- **No semicolons** - Enforced by Prettier
+- **Functional patterns** - Pure functions, immutability
+- **80 char line limit** - Keep code readable
+
+## 📋 Implementation Checklist
+
+When implementing each feature:
+
+- [ ] Read the scenario in `features/medium-scraper.feature`
+- [ ] Create Jest BDD test in `test/acceptance/`
+- [ ] Run test (should fail initially)
+- [ ] Implement minimal code to pass test
+- [ ] Run `npm test` - verify pass
+- [ ] Run `npm run quality` - verify clean
+- [ ] Refactor if needed (keeping tests green)
+- [ ] Move to next scenario
+
+## 🏗️ Project Structure
+
+```
+project/
+├── features/
+│   └── medium-scraper.feature    # Requirements as Gherkin scenarios
+├── test/
+│   └── acceptance/               # BDD-style Jest tests
+│       ├── auth.test.js         # Authentication tests
+│       ├── scraping.test.js     # Scraping tests
+│       └── storage.test.js      # Storage tests
+├── src/
+│   ├── auth/                    # OAuth implementation
+│   ├── scraper/                 # Scraping logic
+│   └── storage/                 # File management
+└── CLAUDE.md                     # This file
+```
+
+## 💡 Test Pattern Template
+
+Use this BDD pattern for all acceptance tests:
+
+```javascript
+// test/acceptance/<feature>.test.js
+describe('Feature: <Feature Name>', () => {
+  describe('Scenario: <Scenario Name>', () => {
+    let result
+
+    beforeEach(() => {
+      // Given setup
+    })
+
+    describe('When <action>', () => {
+      beforeEach(async () => {
+        // Action execution
+        result = await performAction()
+      })
+
+      it('Then <expected outcome>', () => {
+        expect(result).toBe(expectedValue)
+      })
+
+      it('And <additional outcome>', () => {
+        expect(sideEffect).toHaveBeenCalled()
+      })
+    })
+  })
+})
+```
+
+## 🔄 Development Workflow
+
+### Phase 1: Setup & Authentication
+
+1. Review authentication scenarios in feature file
+2. Implement Google OAuth flow with tests
+3. Validate token storage and refresh
+
+### Phase 2: Profile Discovery
+
+1. Test Medium profile URL parsing
+2. Implement post listing retrieval
+3. Handle pagination for all posts
+
+### Phase 3: Content Scraping
+
+1. Test markdown conversion
+2. Implement image downloading
+3. Update image references to local paths
+
+### Phase 4: Storage & Organization
+
+1. Test directory structure creation
+2. Implement file naming strategies
+3. Handle duplicates and updates
+
+## 🛠️ Common Tasks
+
+### Adding a New Feature
+
+```bash
+# 1. Read the scenario
+cat features/medium-scraper.feature | grep -A 10 "Scenario: Your Feature"
+
+# 2. Create test file
+touch test/acceptance/your-feature.test.js
+
+# 3. Run test in watch mode
+npm test -- --watch --testPathPattern="your-feature"
+
+# 4. Implement until green
+# 5. Check quality
 npm run quality
 ```
 
-### Workflow Enforcement Rules
+### Debugging Failed Tests
 
-1. **NEVER proceed to the next task** until both `npm test` and `npm run quality` pass
-2. **NEVER skip this workflow** - even for "small changes" or "quick fixes"
-3. **ALWAYS run the full test suite** - no selective testing
-4. **ALWAYS verify quality standards** - no exceptions for any file type
+```bash
+# Run with verbose output
+npm test -- --verbose
 
-### Quality Gates - ALL Must Pass
+# Run single test with debugging
+node --inspect-brk node_modules/.bin/jest --runInBand
+```
 
-- ✅ **All tests pass**: `npm test` returns success
-- ✅ **No linting errors**: ESLint finds no issues
-- ✅ **Proper formatting**: Prettier formatting is applied
-- ✅ **No console warnings**: All console usage is intentional
-- ✅ **Functional patterns**: Code follows functional programming constraints
+## 📝 Current Implementation Status
 
-### Failure Response Protocol
+Track progress here:
 
-If ANY quality gate fails:
+- [x] Authentication flow
+- [x] Profile discovery
+- [x] Post listing
+- [x] Content scraping
+- [x] Image handling
+- [ ] Storage organization
+- [ ] Duplicate detection
+- [ ] Incremental updates
 
-1. **STOP** all other work immediately
-2. **FIX** the failing quality check first
-3. **RE-RUN** both test and quality scripts
-4. **ONLY THEN** proceed with next task
-
-## Development Approach
-
-**IMPORTANT**: This project uses Acceptance Test Driven Development (ATDD) with Jest and BDD-style assertions. Before implementing any feature:
-
-1. **Read the feature specifications** in `features/medium-scraper.feature`
-2. **Write Jest acceptance tests** that describe the expected behavior in BDD style
-3. **Implement features to satisfy the acceptance tests**
-4. **Validate each test passes** before moving to the next
-5. **Reference the feature file continuously** during development to ensure requirements are met
-
-The feature file contains comprehensive Gherkin scenarios that define the expected behavior. Translate these into Jest BDD tests as executable specifications.
-
-## Project Overview
-
-This tool solves the problem of exporting Medium blog posts when:
-
-- Medium doesn't provide a comprehensive API
-- RSS feeds only show the last 20 posts
-- Chrome plugins aren't suitable
-- Authentication through Google SSO is required
-
-**All development must satisfy the acceptance criteria defined in the feature file.**
-
-## Core Requirements
+## 🔍 Key Implementation Details
 
 ### Authentication
 
-- Implement Google OAuth 2.0 authentication to handle Medium's SSO requirement
-- Use Google's OAuth client library for Node.js
-- Store and manage authentication tokens securely
-- Handle token refresh automatically
+- Use Google OAuth 2.0 for Medium SSO
+- Store tokens securely (consider keychain/credential manager)
+- Implement automatic token refresh
 
-### Web Scraping
+### Scraping Strategy
 
-- Use Puppeteer or Playwright for browser automation to handle JavaScript-rendered content
-- Navigate to user's Medium profile page while authenticated
-- Discover all published posts by pagination or infinite scroll handling
-- Extract full article content, metadata, and images
-- Handle Medium's dynamic loading and anti-bot measures
+- Parse Medium's HTML structure (may change)
+- Extract clean markdown from post content
+- Preserve code blocks and formatting
+- Download images with proper naming
 
-### Content Processing
+### Storage Format
 
-- Convert Medium's HTML content to clean markdown format
-- Extract and preserve:
-  - Article title, subtitle, and content
-  - Publication date and last modified date
-  - Tags and categories
-  - Author information
-  - Featured image and inline images
-  - Reading time estimates
-- Generate frontmatter in YAML format with all metadata
-- Handle code blocks, embeds, and special Medium formatting
-
-### File Management
-
-- Create organized directory structure for downloaded posts
-- Name files using URL slug or title-based naming
-- Download and organize associated images locally
-- Update image references in markdown to local paths
-- Handle duplicate posts and incremental updates
-
-## Technical Constraints
-
-### Code Style Requirements
-
-- **MANDATORY**: Use vanilla JavaScript with ES modules (import/export)
-- **MANDATORY**: Implement functional programming patterns throughout
-- **MANDATORY**: Use arrow functions exclusively for function definitions
-- **MANDATORY**: Avoid classes - use factory functions and closures instead
-- **NO SEMICOLONS** (enforced by Prettier configuration)
-- Single quotes for strings
-- 2-space indentation
-- 80-character line limit
-- Trailing commas in ES5 contexts
-- No unused variables
-- Prefer const over let
-- No var declarations
-- Consistent arrow function spacing
-- No duplicate imports
-
-### Architecture
-
-Modular design with separate files for different concerns:
-
-- `src/auth.js` - Google OAuth handling
-- `src/scraper.js` - Medium content extraction
-- `src/converter.js` - HTML to markdown conversion
-- `src/storage.js` - File system operations
-- `src/config.js` - Configuration management
-- `src/logger.js` - Logging utilities
-- `src/main.js` - Application orchestration
-
-Use dependency injection patterns and implement proper error handling with functional error types.
-
-### Dependencies
-
-Core packages required:
-
-- `puppeteer` for browser automation
-- `googleapis` for Google OAuth
-- `turndown` for HTML to markdown conversion
-- `gray-matter` for frontmatter handling
-- `jest` for testing framework with BDD assertions
-- `eslint` and `prettier` for code quality
-
-## Expected Deliverables
-
-### File Structure
-
-```bash
-medium-scraper/
-├── features/
-│   └── medium-scraper.feature      # Gherkin specifications (reference only)
-├── src/                           # Application code (you will create)
-│   ├── auth.js
-│   ├── scraper.js
-│   ├── converter.js
-│   ├── storage.js
-│   ├── config.js
-│   ├── logger.js
-│   └── main.js
-├── test/
-│   ├── acceptance/                # Jest acceptance tests (you will create)
-│   └── unit/                     # Jest unit tests (you will create)
-├── output/
-│   ├── posts/
-│   ├── images/
-│   └── metadata.json
-├── CLAUDE.md                     # This file
-└── [config files from above]    # All .js, .json config files
+```
+output/
+├── posts/
+│   ├── 2024-01-15-post-title.md
+│   └── 2024-02-20-another-post.md
+└── images/
+    ├── post-title/
+    │   ├── image1.jpg
+    │   └── image2.png
+    └── another-post/
+        └── header.jpg
 ```
 
-### CLI Interface
+## 🚀 Quick Start for Claude Code
 
-- Interactive prompts for configuration
-- Progress indicators for scraping operations
-- Commands: `scrape`, `auth`, `config`, `resume`, `validate`, `clean`
-- Verbose/quiet mode options
-- Resume capability for interrupted operations
+When starting a session:
 
-### Sample Output Format
+1. **Read this file first** for context
+2. **Check implementation status** above
+3. **Review feature file** for current scenario
+4. **Run tests** to see current state
+5. **Continue from last failing test**
 
-Each markdown file should have YAML frontmatter:
+## 📌 Remember
 
-```yaml
+- **Quality gates are mandatory** - No exceptions
+- **Tests drive development** - Write test first
+- **Functional style only** - No OOP patterns
+- **Follow the scenarios** - They define success
+- **Run quality checks** - After every change
+
 ---
-title: 'Post Title'
-subtitle: 'Post Subtitle'
-date: '2024-01-15T10:30:00Z'
-lastModified: '2024-01-16T14:22:00Z'
-author: 'Author Name'
-tags: ['tag1', 'tag2', 'tag3']
-readingTime: '5 min read'
-mediumUrl: 'https://medium.com/@user/post-title-123abc'
-featuredImage: './images/featured-image.jpg'
-published: true
----
-# Post Title
 
-Post content in clean markdown...
-```
-
-## Implementation Process - ATDD Workflow
-
-Follow this Acceptance Test Driven Development workflow:
-
-### 1. Scenario Analysis
-
-For each feature in `features/medium-scraper.feature`:
-
-- Read and understand the Gherkin scenario
-- Identify the Given/When/Then acceptance criteria
-- Note any data tables or example values
-- Understand the expected behavior completely
-
-### 2. Test-First Implementation
-
-- **Translate Gherkin scenarios to Jest BDD tests** in `test/acceptance/`
-- Write descriptive `describe()` and `it()` blocks that mirror the Given/When/Then structure
-- Use Jest's built-in BDD assertions (expect().toBe(), expect().toHaveBeenCalled(), etc.)
-- Run the acceptance test (it should fail initially)
-- Implement just enough application code to make the test pass
-- **After test passes, run quality checks**: `npm run quality`
-- Refactor while keeping tests green and code quality high
-
-### 3. Validation
-
-- Ensure each Jest test passes completely before moving on
-- **Verify code passes ESLint and Prettier checks**
-- Verify edge cases mentioned in the feature scenarios
-- Confirm the implementation matches the expected behavior exactly
-
-### 4. Continuous Validation Commands
-
-```bash
-# Run specific test by name pattern
-npm test -- --testNamePattern="Initial Google OAuth Authentication"
-
-# Run related tests to ensure no regression
-npm test -- --testPathPattern="auth"
-
-# Run all tests and quality checks before moving to next phase
-npm test && npm run quality
-```
-
-## Key Features to Implement (Based on Feature File)
-
-Implement these in order, ensuring each scenario passes before proceeding:
-
-### Phase 1: Authentication Scenarios
-
-- [ ] "Initial Google OAuth Authentication"
-- [ ] "Handle Authentication Persistence"
-- [ ] Token refresh and re-authentication flows
-
-### Phase 2: Content Discovery Scenarios
-
-- [ ] "Discover All Published Posts"
-- [ ] Handle pagination and infinite scroll
-- [ ] "Resume Interrupted Operations"
-
-### Phase 3: Content Processing Scenarios
-
-- [ ] "Extract Post Content and Metadata"
-- [ ] "Convert HTML to Markdown"
-- [ ] "Generate Frontmatter Metadata"
-- [ ] "Download and Organize Images"
-
-### Phase 4: Advanced Scenarios
-
-- [ ] "Error Handling and Recovery"
-- [ ] "Incremental Updates"
-- [ ] "Configuration and Customization"
-- [ ] "Progress Reporting and Logging"
-- [ ] "Validation and Quality Assurance"
-- [ ] "Command Line Interface"
-
-## Success Criteria
-
-The application should satisfy ALL scenarios in `features/medium-scraper.feature`:
-
-1. **Authentication scenarios** - OAuth flow, token persistence, refresh handling
-2. **Content discovery scenarios** - Profile navigation, post discovery, pagination
-3. **Content processing scenarios** - HTML conversion, frontmatter generation, image handling
-4. **Operational scenarios** - Error handling, progress reporting, resume capability
-5. **Quality scenarios** - Validation, configuration, CLI interface
-
-**Each scenario must pass its acceptance criteria before the feature is considered complete.**
-
-## Acceptance Test Setup
-
-### BDD Test Structure Example
-
-```javascript
-// test/acceptance/auth.test.js
-describe('Google OAuth Authentication', () => {
-  describe('Given I run the scraper for the first time', () => {
-    describe('When I execute the authentication command', () => {
-      it('should prompt me to authorize with Google', async () => {
-        // Test implementation
-        expect(authPrompt).toHaveBeenCalled()
-      })
-
-      it('should store auth tokens securely after granting permission', async () => {
-        // Test implementation
-        expect(tokenStorage.save).toHaveBeenCalledWith(
-          expect.objectContaining({
-            access_token: expect.any(String),
-            refresh_token: expect.any(String),
-          })
-        )
-      })
-    })
-  })
-})
-```
-
-### Jest Test Files Structure
-
-In `test/acceptance/`, create Jest BDD test files that mirror the feature scenarios:
-
-- `auth.test.js` - Authentication scenario tests
-- `scraper.test.js` - Content discovery and processing tests
-- `cli.test.js` - Command line interface tests
-- `error.test.js` - Error handling tests
-
-Each test file should follow BDD structure:
-
-```javascript
-describe('Feature: Authentication', () => {
-  describe('Scenario: Initial Google OAuth Authentication', () => {
-    describe('Given I run the scraper for the first time', () => {
-      // Setup code
-    })
-
-    describe('When I execute the authentication command', () => {
-      // Action code
-    })
-
-    it('Then I should be prompted to authorize with Google', () => {
-      // Assertion code
-    })
-  })
-})
-```
-
-## Implementation Priority
-
-**CRITICAL**: Follow ATDD methodology strictly:
-
-1. **Start by reading** `features/medium-scraper.feature` completely
-2. **Implement scenarios in order** as listed in the feature file
-3. **Do not proceed** to the next scenario until the current one passes
-4. **Reference the feature file continuously** during implementation
-5. **Validate behavior** matches the Gherkin scenarios exactly
-
-All implementation must:
-
-- **Satisfy the acceptance criteria** in the feature file scenarios
-- Use functional programming patterns exclusively
-- Include comprehensive error handling
-- Provide clear progress feedback as specified in scenarios
-- Handle all edge cases mentioned in the feature scenarios
-- Pass both unit and acceptance tests
-
-**NO EXCEPTIONS**: Code that doesn't pass quality checks cannot proceed to the next scenario.
+_This document is optimized for Claude Code. Always refer to `features/medium-scraper.feature` for authoritative requirements._
