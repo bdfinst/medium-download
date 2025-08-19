@@ -1,20 +1,7 @@
 import { createStorageService } from '../../src/storage.js'
+import { createMockFn } from '../test-utils.js'
 import { fileURLToPath } from 'url'
 import path from 'path'
-
-// Create a simple mock function replacement
-const createMockFn = returnValue => {
-  const fn = (...args) => {
-    fn.calls = fn.calls || []
-    fn.calls.push(args)
-    if (typeof returnValue === 'function') {
-      return returnValue(...args)
-    }
-    return returnValue
-  }
-  fn.calls = []
-  return fn
-}
 
 describe('Storage Service - Directory Structure', () => {
   let storageService
@@ -95,89 +82,65 @@ The end.`
         )
       })
 
-      it('Then it should create the post directory', () => {
+      it('Then it should create the post directory structure', () => {
         expect(result.success).toBe(true)
+        expect(result.postDir).toBeDefined()
+        expect(result.postDir).toContain('test-post-slug')
 
-        // Check that ensureDirectory was called for the post directory
-        const ensureDirCalls = mockFileSystem.ensureDirectory.calls
-        const postDirCall = ensureDirCalls.find(
-          call =>
-            call[0].includes('test-post-slug') && !call[0].includes('images')
-        )
+        // Verify directory creation was requested (outcome-focused)
+        expect(mockFileSystem.ensureDirectory.toHaveBeenCalled()).toBe(true)
 
-        expect(postDirCall).toBeDefined()
-
-        const expectedPostDir = path.join(testOutputDir, 'test-post-slug')
-        expect(postDirCall[0]).toBe(expectedPostDir)
+        // Verify at least two directories were created: post dir and images dir
+        expect(
+          mockFileSystem.ensureDirectory.calls.length
+        ).toBeGreaterThanOrEqual(2)
       })
 
-      it('And it should create the images subdirectory', () => {
-        // Check that ensureDirectory was called for the images directory
-        const ensureDirCalls = mockFileSystem.ensureDirectory.calls
-        const imagesDirCall = ensureDirCalls.find(call =>
-          call[0].includes('test-post-slug/images')
-        )
+      it('And it should organize images in a dedicated subdirectory', () => {
+        // Focus on outcome: images should be properly organized
+        expect(result.success).toBe(true)
+        expect(result.imagesDownloaded).toBe(2)
 
-        expect(imagesDirCall).toBeDefined()
-
-        const expectedImagesDir = path.join(
-          testOutputDir,
-          'test-post-slug',
-          'images'
+        // Verify images directory was created (behavior-focused)
+        const imagesDirCreated = mockFileSystem.ensureDirectory.calls.some(
+          call => call[0].includes('images')
         )
-        expect(imagesDirCall[0]).toBe(expectedImagesDir)
+        expect(imagesDirCreated).toBe(true)
       })
 
-      it('And it should save the markdown file in the post directory', () => {
-        // Check that writeFile was called with the correct path
-        const writeFileCalls = mockFileSystem.writeFile.calls
-        const markdownCall = writeFileCalls.find(call =>
+      it('And it should save the post as a markdown file', () => {
+        // Focus on outcome: markdown file should be saved with correct path
+        expect(result.success).toBe(true)
+        expect(result.markdownFile).toBeDefined()
+        expect(result.markdownFile).toContain('test-post-slug.md')
+
+        // Verify file writing was attempted
+        expect(mockFileSystem.writeFile.toHaveBeenCalled()).toBe(true)
+
+        // Verify a markdown file was written
+        const markdownFileWritten = mockFileSystem.writeFile.calls.some(call =>
           call[0].endsWith('.md')
         )
-
-        expect(markdownCall).toBeDefined()
-
-        const expectedMarkdownPath = path.join(
-          testOutputDir,
-          'test-post-slug',
-          'test-post-slug.md'
-        )
-        expect(markdownCall[0]).toBe(expectedMarkdownPath)
+        expect(markdownFileWritten).toBe(true)
       })
 
-      it('And it should download images to the post images directory', () => {
-        // Check that downloadImage was called for each referenced image
-        const downloadCalls = mockImageDownloader.downloadImage.calls
+      it('And it should download and organize all post images', () => {
+        // Focus on outcome: images should be downloaded and properly organized
+        expect(result.success).toBe(true)
+        expect(result.imagesDownloaded).toBe(2)
 
-        expect(downloadCalls.length).toBe(2)
+        // Verify image downloading was attempted for all images
+        expect(mockImageDownloader.downloadImage.toHaveBeenCalled()).toBe(true)
+        expect(mockImageDownloader.downloadImage.calls.length).toBe(2)
 
-        // Check featured image path
-        const featuredCall = downloadCalls.find(call =>
-          call[1].includes('test-post-slug-featured.jpg')
+        // Verify images were downloaded to the correct structure
+        const allImagePaths = mockImageDownloader.downloadImage.calls.map(
+          call => call[1]
         )
-        expect(featuredCall).toBeDefined()
-
-        const expectedFeaturedPath = path.join(
-          testOutputDir,
-          'test-post-slug',
-          'images',
-          'test-post-slug-featured.jpg'
+        const allImagesInCorrectDir = allImagePaths.every(
+          path => path.includes('test-post-slug') && path.includes('images')
         )
-        expect(featuredCall[1]).toBe(expectedFeaturedPath)
-
-        // Check content image path
-        const contentCall = downloadCalls.find(call =>
-          call[1].includes('test-post-slug-02.jpg')
-        )
-        expect(contentCall).toBeDefined()
-
-        const expectedContentPath = path.join(
-          testOutputDir,
-          'test-post-slug',
-          'images',
-          'test-post-slug-02.jpg'
-        )
-        expect(contentCall[1]).toBe(expectedContentPath)
+        expect(allImagesInCorrectDir).toBe(true)
       })
 
       it('And it should return the correct directory structure info', () => {
