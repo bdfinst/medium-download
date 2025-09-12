@@ -1,5 +1,5 @@
 import { createPostConverter } from '../../src/converter.js'
-import { createScraperService } from '../../src/scraper.js'
+import { createScraperService } from '../../src/scraper/index.js'
 import { createStorageService } from '../../src/storage.js'
 
 // Reuse mock function helper
@@ -77,7 +77,12 @@ describe('Feature: Content Extraction and Processing', () => {
       }
 
       scraperService = createScraperService({
-        browserLauncher: { launch: createMockFn(Promise.resolve(mockBrowser)) },
+        browserManager: {
+          launch: createMockFn(Promise.resolve(mockBrowser)),
+          createPage: createMockFn(Promise.resolve(mockPage)),
+          close: createMockFn(Promise.resolve()),
+          closePage: createMockFn(Promise.resolve()),
+        },
         authService: mockAuthService,
       })
     })

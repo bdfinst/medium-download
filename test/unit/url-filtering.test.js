@@ -1,4 +1,4 @@
-import { createScraperService } from '../../src/scraper.js'
+import { createScraperService } from '../../src/scraper/index.js'
 import { createMockFn, urlTestCases } from '../test-utils.js'
 
 describe('URL Filtering - Post Detection Behavior', () => {
@@ -44,13 +44,16 @@ describe('URL Filtering - Post Detection Behavior', () => {
       close: createMockFn(Promise.resolve()),
     }
 
-    // Mock browser launcher
-    const mockBrowserLauncher = {
+    // Mock browser manager
+    const mockBrowserManager = {
       launch: createMockFn(Promise.resolve(mockBrowser)),
+      createPage: createMockFn(Promise.resolve(mockPage)),
+      close: createMockFn(Promise.resolve()),
+      closePage: createMockFn(Promise.resolve()),
     }
 
     scraperService = createScraperService({
-      browserLauncher: mockBrowserLauncher,
+      browserManager: mockBrowserManager,
       authService: mockAuthService,
     })
   })

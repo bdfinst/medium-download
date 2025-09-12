@@ -1,4 +1,4 @@
-import { createScraperService } from '../../src/scraper.js'
+import { createScraperService } from '../../src/scraper/index.js'
 import { createMockFn } from '../test-utils.js'
 
 describe('Feature: Medium Blog Scraper - Post Discovery', () => {
@@ -37,9 +37,12 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         close: createMockFn(Promise.resolve()),
       }
 
-      // Mock browser launcher
-      const mockBrowserLauncher = {
+      // Mock browser manager
+      const mockBrowserManager = {
         launch: createMockFn(Promise.resolve(mockBrowser)),
+        createPage: createMockFn(Promise.resolve(mockPage)),
+        close: createMockFn(Promise.resolve()),
+        closePage: createMockFn(Promise.resolve()),
       }
 
       // Mock authentication service
@@ -55,7 +58,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
       }
 
       scraperModule = createScraperService({
-        browserLauncher: mockBrowserLauncher,
+        browserManager: mockBrowserManager,
         authService: mockAuthService,
       })
     })
@@ -185,8 +188,11 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         mockAuthService.isAuthenticated = createMockFn(Promise.resolve(false))
 
         scraperModule = createScraperService({
-          browserLauncher: {
+          browserManager: {
             launch: createMockFn(Promise.resolve(mockBrowser)),
+            createPage: createMockFn(Promise.resolve(mockPage)),
+            close: createMockFn(Promise.resolve()),
+            closePage: createMockFn(Promise.resolve()),
           },
           authService: mockAuthService,
         })
