@@ -2,6 +2,7 @@ import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
 
 import { withErrorHandling } from './utils.js'
+import { CONTENT } from './constants.js'
 
 // Factory function for creating HTML to Markdown converter
 const createConverter = (options = {}) => {
@@ -102,7 +103,7 @@ const createConverter = (options = {}) => {
           text.includes('follow me') ||
           text.includes('connect with me') ||
           (text.includes(' in ') &&
-            text.length < 30 &&
+            text.length < CONTENT.TEXT_CLASSIFICATION_THRESHOLD_SHORT &&
             !text.includes('italic')) || // Short "in [Publication]" text, but not our test content
           text.match(/^.+\s+is a .+ (at|with)/i)
         ) {
@@ -114,7 +115,7 @@ const createConverter = (options = {}) => {
       if (node.tagName === 'SPAN') {
         if (
           text === 'in' ||
-          (text.length < 20 &&
+          (text.length < CONTENT.TEXT_CLASSIFICATION_THRESHOLD_BRIEF &&
             (text.includes('min read') ||
               text.includes('dec ') ||
               text.includes('jan ') ||
@@ -138,7 +139,7 @@ const createConverter = (options = {}) => {
       if (node.tagName === 'DIV') {
         if (
           className.includes('article-meta') ||
-          (text.length < 50 &&
+          (text.length < CONTENT.TEXT_CLASSIFICATION_THRESHOLD_MEDIUM &&
             (text.includes('min read') ||
               text.includes(' in ') ||
               /^\d{1,2}\s*claps?$/i.test(text) ||
@@ -154,7 +155,7 @@ const createConverter = (options = {}) => {
       }
 
       // Filter simple UI text elements (but not complex content)
-      const hasComplexContent = node.children.length > 0 || text.length > 100
+      const hasComplexContent = node.children.length > 0 || text.length > CONTENT.TEXT_CLASSIFICATION_THRESHOLD_LONG
       if (!hasComplexContent) {
         const uiPatterns = [
           /^(sign up|sign in|get started)/i,
@@ -180,7 +181,7 @@ const createConverter = (options = {}) => {
       }
 
       // Also filter any text containing UI keywords if it's short and likely UI
-      if (text.length < 50) {
+      if (text.length < CONTENT.TEXT_CLASSIFICATION_THRESHOLD_MEDIUM) {
         if (
           /👏/.test(text) ||
           text === 'clap' ||

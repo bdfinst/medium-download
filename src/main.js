@@ -7,6 +7,7 @@ import { createStorageService } from './storage.js'
 import { getCurrentConfig } from './config.js'
 import { createScrapePipeline } from './main/pipeline.js'
 import { logger } from './utils.js'
+import { CLI } from './constants.js'
 import { config } from 'dotenv'
 
 // Load environment variables
@@ -81,9 +82,9 @@ export const createMediumScraper = (dependencies = {}) => {
 
 // CLI interface when run directly
 const runCLI = async () => {
-  const args = process.argv.slice(2)
-  const command = args[0]
-  const profileUrl = args[1]
+  const args = process.argv.slice(CLI.ARG_OFFSET)
+  const command = args[CLI.COMMAND_INDEX]
+  const profileUrl = args[CLI.PROFILE_URL_INDEX]
 
   const scraper = createMediumScraper()
 
@@ -98,7 +99,7 @@ const runCLI = async () => {
     case 'summary': {
       if (!profileUrl) {
         console.error('❌ Profile URL required')
-        process.exit(1)
+        process.exit(CLI.EXIT_ERROR)
       }
       const debugMode = args.includes('--debug')
       await scraper.getProfileSummary(profileUrl, { debug: debugMode })
@@ -108,7 +109,7 @@ const runCLI = async () => {
     case 'scrape': {
       if (!profileUrl) {
         console.error('❌ Profile URL required')
-        process.exit(1)
+        process.exit(CLI.EXIT_ERROR)
       }
       const debugMode = args.includes('--debug')
       await scraper.scrapeProfile(profileUrl, { debug: debugMode })
@@ -118,7 +119,7 @@ const runCLI = async () => {
     case 'incremental': {
       if (!profileUrl) {
         console.error('❌ Profile URL required')
-        process.exit(1)
+        process.exit(CLI.EXIT_ERROR)
       }
       const debugMode = args.includes('--debug')
       await scraper.scrapeProfile(profileUrl, {
@@ -170,7 +171,7 @@ const runCLI = async () => {
 if (import.meta.url === `file://${process.argv[1]}`) {
   runCLI().catch(error => {
     console.error('❌ Error:', error.message)
-    process.exit(1)
+    process.exit(CLI.EXIT_ERROR)
   })
 }
 

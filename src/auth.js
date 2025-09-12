@@ -3,6 +3,7 @@ import { promises as fs, existsSync } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import readline from 'readline'
+import { CONTENT, NETWORK } from './constants.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -31,7 +32,7 @@ const createTokenStorage = () => {
 
     save: async tokens => {
       try {
-        await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2))
+        await fs.writeFile(tokenPath, JSON.stringify(tokens, null, CONTENT.JSON_INDENT))
         return true
       } catch (error) {
         throw new Error(`Failed to save tokens: ${error.message}`)

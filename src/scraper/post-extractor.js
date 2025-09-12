@@ -1,4 +1,4 @@
-import { SELECTORS, LIMITS, EXCLUDED_PATHS } from '../constants.js'
+import { SELECTORS, LIMITS, EXCLUDED_PATHS, EXTRACTION, CONTENT } from '../constants.js'
 
 // Factory function for post extraction service
 export const createPostExtractor = navigator => {
@@ -20,18 +20,18 @@ export const createPostExtractor = navigator => {
     if (url.includes('/@')) {
       const pathParts = cleanUrl.split('/')
       // Must have username and post slug
-      return pathParts.length >= 5 && pathParts[4] && pathParts[4].length > 0
+      return pathParts.length >= LIMITS.URL_PATH_SEGMENTS_MIN && pathParts[4] && pathParts[4].length > 0
     }
 
     // Subdomain posts: username.medium.com/post-title (but not just the domain)
     if (url.includes('.medium.com')) {
       const pathParts = cleanUrl.split('/')
       return (
-        pathParts.length > 3 &&
+        pathParts.length > LIMITS.URL_PATH_SEGMENTS_MIN_SUBDOMAIN &&
         !cleanUrl.endsWith('.medium.com/') &&
         !cleanUrl.endsWith('.medium.com') &&
         pathParts[3] !== '' &&
-        pathParts[3].length > 8 // Post slugs are typically longer
+        pathParts[3].length > LIMITS.POST_SLUG_MIN_LENGTH // Post slugs are typically longer
       )
     }
 
@@ -42,7 +42,7 @@ export const createPostExtractor = navigator => {
       !url.includes('medium.com/m/')
     ) {
       const pathParts = cleanUrl.split('/')
-      return pathParts.length > 4 && pathParts[4] && pathParts[4].length > 0
+      return pathParts.length > LIMITS.URL_PATH_SEGMENTS_MIN_PUBLICATION && pathParts[4] && pathParts[4].length > 0
     }
 
     return false
@@ -81,15 +81,15 @@ export const createPostExtractor = navigator => {
           mediumLinkCount: mediumLinks.length,
           subdomainLinkCount: subdomainLinks.length,
           totalLinkCount: allLinks.length,
-          potentialPostLinks: potentialPostLinks.slice(0, 5).map(link => ({
+          potentialPostLinks: potentialPostLinks.slice(0, EXTRACTION.POTENTIAL_POSTS_LIMIT).map(link => ({
             href: link.href,
-            text: link.textContent?.trim()?.substring(0, 50),
+            text: link.textContent?.trim()?.substring(0, LIMITS.TITLE_PREVIEW_LENGTH),
           })),
           firstFewLinks: Array.from(allLinks)
-            .slice(0, 10)
+            .slice(0, EXTRACTION.DEBUG_LINKS_LIMIT)
             .map(link => ({
               href: link.href,
-              text: link.textContent?.trim()?.substring(0, 50),
+              text: link.textContent?.trim()?.substring(0, LIMITS.TITLE_PREVIEW_LENGTH),
             }))
             .filter(link => link.href.includes('medium.com')),
         }
@@ -206,7 +206,7 @@ export const createPostExtractor = navigator => {
               let title = link.textContent?.trim() || ''
 
               // If link has no text, look in parent elements
-              if (!title || title.length < 5) {
+              if (!title || title.length < CONTENT.TITLE_MIN_LENGTH) {
                 const container = link.closest('article, div, section')
                 if (container) {
                   const titleElement = container.querySelector(selectors.TITLES)
@@ -219,7 +219,7 @@ export const createPostExtractor = navigator => {
               // Only include if we have a meaningful title and haven't seen this URL
               if (
                 title &&
-                title.length > 5 &&
+                title.length > CONTENT.TITLE_MIN_LENGTH &&
                 !extractedPosts.some(post => post.url === href)
               ) {
                 extractedPosts.push({
@@ -326,7 +326,7 @@ export const createPostExtractor = navigator => {
             documentHeight - (scrollTop + windowHeight)
 
           // If there's significant content below, definitely more to load
-          if (scrollableRemaining > 500) return true
+          if (scrollableRemaining > EXTRACTION.REMAINING_CONTENT_SIGNIFICANT) return true
 
           // Check for loading indicators
           const loadingIndicators = document.querySelectorAll(
@@ -342,7 +342,7 @@ export const createPostExtractor = navigator => {
           return (
             loadingIndicators.length > 0 ||
             loadMoreButtons.length > 0 ||
-            scrollableRemaining > 50
+            scrollableRemaining > EXTRACTION.REMAINING_CONTENT_MINIMAL
           )
           /* eslint-enable no-undef */
         },
@@ -398,7 +398,7 @@ export const createPostExtractor = navigator => {
           result.tags = Array.from(tagElements)
             .map(tag => tag.textContent.trim())
             .filter(Boolean)
-            .filter(tag => tag.length > 0 && tag.length < 50) // Reasonable tag length
+            .filter(tag => tag.length > 0 && tag.length < LIMITS.TAG_LENGTH_MAX) // Reasonable tag length
 
           // Extract reading time
           const readingTimeElement = document.querySelector(

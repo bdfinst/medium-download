@@ -18,6 +18,7 @@ export const TIMEOUTS = {
   WAIT_FOR_SELECTOR: 20000,
   ELEMENT_WAIT_FAST: 1000,
   ELEMENT_WAIT_NORMAL: 20000,
+  AUTH_TOKEN_EXPIRY: 3600000, // 1 hour
 }
 
 export const LIMITS = {
@@ -30,6 +31,56 @@ export const LIMITS = {
   TAG_LENGTH_MAX: 50,
   TITLE_PREVIEW_LENGTH: 50,
   POST_SLUG_MIN_LENGTH: 8,
+  URL_PATH_MIN_LENGTH: 2,
+  URL_PATH_SEGMENTS_MIN: 5,
+  URL_PATH_SEGMENTS_MIN_SUBDOMAIN: 3,
+  URL_PATH_SEGMENTS_MIN_PUBLICATION: 4,
+}
+
+// Content processing constants
+export const CONTENT = {
+  TITLE_MIN_LENGTH: 5,
+  TEXT_CLASSIFICATION_THRESHOLD_SHORT: 30,
+  TEXT_CLASSIFICATION_THRESHOLD_BRIEF: 20,
+  TEXT_CLASSIFICATION_THRESHOLD_MEDIUM: 50,
+  TEXT_CLASSIFICATION_THRESHOLD_LONG: 100,
+  PADDING_DIGITS: 2,
+  PADDING_CHAR: '0',
+  JSON_INDENT: 2,
+  H2_TO_TITLE_MATCH_OFFSET: 2, // slice(2) for removing "# "
+}
+
+// URL and networking
+export const NETWORK = {
+  LOCALHOST_PORT: 3000,
+  CHROME_VERSION: '120.0.0.0',
+  DEFAULT_REDIRECT_URI: 'http://localhost:3000/auth/callback',
+}
+
+// Process and CLI
+export const CLI = {
+  ARG_OFFSET: 2, // process.argv.slice(2)
+  EXIT_ERROR: 1,
+  EXIT_SUCCESS: 0,
+  COMMAND_INDEX: 0,
+  PROFILE_URL_INDEX: 1,
+}
+
+// Content extraction thresholds
+export const EXTRACTION = {
+  DEBUG_LINKS_LIMIT: 10,
+  POTENTIAL_POSTS_LIMIT: 5,
+  REMAINING_CONTENT_SIGNIFICANT: 500,
+  REMAINING_CONTENT_MINIMAL: 50,
+  HEX_ID_LENGTH: 12,
+}
+
+// Concurrency settings
+export const CONCURRENCY = {
+  DEFAULT_BATCH_SIZE: 3,
+  MAX_CONCURRENT_POSTS: 5,
+  BROWSER_POOL_SIZE: 2,
+  CONNECTION_POOL_TIMEOUT: 30000,
 }
 
 export const SELECTORS = {
@@ -80,8 +131,7 @@ export const SELECTORS = {
     'article, [data-testid*="post"], [data-testid*="story"], a[href*="/@"]',
 }
 
-export const USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+export const USER_AGENT = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${NETWORK.CHROME_VERSION} Safari/537.36`
 
 export const BROWSER_ARGS = ['--no-sandbox', '--disable-setuid-sandbox']
 

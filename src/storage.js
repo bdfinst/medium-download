@@ -2,6 +2,7 @@ import { promises as fs, existsSync } from 'fs'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
 import { withErrorHandling } from './utils.js'
+import { CONTENT } from './constants.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -91,7 +92,7 @@ const createImageDownloader = () => ({
       return `${slug}-featured${extension}`
     }
 
-    return `${slug}-${String(index).padStart(2, '0')}${extension}`
+    return `${slug}-${String(index).padStart(CONTENT.PADDING_DIGITS, CONTENT.PADDING_CHAR)}${extension}`
   },
 })
 
@@ -235,7 +236,7 @@ export const createStorageService = (dependencies = {}) => {
         })
       }
 
-      const metadataContent = JSON.stringify(enhancedMetadata, null, 2)
+      const metadataContent = JSON.stringify(enhancedMetadata, null, CONTENT.JSON_INDENT)
       await fileSystem.writeFile(metadataPath, metadataContent)
 
       return {
