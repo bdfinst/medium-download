@@ -1,29 +1,20 @@
 import { createScraperService } from '../../src/scraper.js'
-import { createMockFn, urlTestCases } from '../test-utils.js'
+import { createMockAuthService } from '../test-factories.js'
+import { urlTestCases, createMockFn } from '../test-utils.js'
 
 describe('URL Filtering - Post Detection Behavior', () => {
   let scraperService
-  let mockBrowser
+  let mockBrowserLauncher
   let mockPage
   let mockAuthService
 
   beforeEach(() => {
-    // Mock authentication service
-    mockAuthService = {
-      isAuthenticated: createMockFn(Promise.resolve(true)),
-      getAuthStatus: createMockFn(
-        Promise.resolve({
-          authenticated: true,
-          hasTokens: true,
-          expiryDate: Date.now() + 3600000,
-        })
-      ),
-    }
+    mockAuthService = createMockAuthService({ authenticated: true })
 
-    // Mock page with full Puppeteer interface
+    // Simplified mock setup - focus on behavior testing
     mockPage = {
       goto: createMockFn(Promise.resolve({ status: () => 200 })),
-      evaluate: createMockFn(),
+      evaluate: createMockFn(Promise.resolve([])),
       close: createMockFn(Promise.resolve()),
       setUserAgent: createMockFn(Promise.resolve()),
       waitForSelector: createMockFn(Promise.resolve()),
@@ -38,15 +29,13 @@ describe('URL Filtering - Post Detection Behavior', () => {
       waitForTimeout: createMockFn(Promise.resolve()),
     }
 
-    // Mock browser
-    mockBrowser = {
-      newPage: createMockFn(Promise.resolve(mockPage)),
-      close: createMockFn(Promise.resolve()),
-    }
-
-    // Mock browser launcher
-    const mockBrowserLauncher = {
-      launch: createMockFn(Promise.resolve(mockBrowser)),
+    mockBrowserLauncher = {
+      launch: createMockFn(
+        Promise.resolve({
+          newPage: createMockFn(Promise.resolve(mockPage)),
+          close: createMockFn(Promise.resolve()),
+        })
+      ),
     }
 
     scraperService = createScraperService({
@@ -66,16 +55,12 @@ describe('URL Filtering - Post Detection Behavior', () => {
             publishDate: '2024-01-15',
           }
 
-          // Mock the evaluate function to simulate URL filtering behavior
-          // The scraper should only return posts that pass URL validation
-          mockPage.evaluate = createMockFn(() => {
-            // This simulates the actual browser-side URL filtering logic
-            // without duplicating the implementation
-            const expectedPosts = shouldInclude
-              ? [{ ...testPost, source: 'article' }]
-              : []
-            return Promise.resolve(expectedPosts)
-          })
+          // Configure mock to return posts based on URL filtering logic
+          const expectedPosts = shouldInclude
+            ? [{ ...testPost, source: 'article' }]
+            : []
+
+          mockPage.evaluate = createMockFn(Promise.resolve(expectedPosts))
 
           // Test the scraper's post discovery behavior
           // Use the same username as in the test URL for consistency
@@ -113,17 +98,15 @@ describe('URL Filtering - Post Detection Behavior', () => {
           'https://user.medium.com/another-post-456def',
         ]
 
-        // Mock the evaluate to return posts that would pass URL filtering
-        mockPage.evaluate = createMockFn(() =>
-          Promise.resolve(
-            expectedValidPosts.map((url, index) => ({
-              title: `Post ${index + 1}`,
-              url,
-              publishDate: '2024-01-15',
-              source: 'article',
-            }))
-          )
-        )
+        // Configure mock to return valid filtered posts
+        const validPosts = expectedValidPosts.map((url, index) => ({
+          title: `Post ${index + 1}`,
+          url,
+          publishDate: '2024-01-15',
+          source: 'article',
+        }))
+
+        mockPage.evaluate = createMockFn(Promise.resolve(validPosts))
 
         const result = await scraperService.discoverPosts(
           'https://medium.com/@user',
