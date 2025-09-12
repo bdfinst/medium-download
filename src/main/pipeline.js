@@ -1,5 +1,5 @@
 // Functional pipeline for the Medium Scraper main workflow
-import { pipeAsync, Result } from '../utils/functional.js'
+import { pipeResultAsync, Result } from '../utils/functional.js'
 import { createErrorHandlingService } from '../error-handling.js'
 
 // Pipeline stage factories - each returns a function that takes context and returns updated context
@@ -165,12 +165,7 @@ export const createPostProcessingStage =
 
       // Convert to markdown with error handling
       const convertResult = await errorHandler.safeAsync(
-        () =>
-          converter.convertToMarkdown(
-            extractData.content,
-            extractData.metadata,
-            post.title
-          ),
+        () => converter.convertPost(extractData),
         `${postContext} - Convert to markdown`
       )
 
@@ -187,8 +182,8 @@ export const createPostProcessingStage =
       const saveResult = await errorHandler.safeAsync(
         () =>
           storage.savePostWithImages(
-            extractData.metadata,
-            convertData.markdown,
+            extractData,
+            convertData.content,
             convertData.referencedImages
           ),
         `${postContext} - Save to filesystem`
@@ -318,7 +313,7 @@ export const createScrapingPipeline = dependencies => {
   const { authService, scraperService, converter, storage, logger } =
     dependencies
 
-  return pipeAsync(
+  return pipeResultAsync(
     // Input validation happens here
     context => {
       if (!context.profileUrl) {

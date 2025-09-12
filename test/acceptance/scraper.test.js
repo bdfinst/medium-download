@@ -8,41 +8,53 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
     let mockBrowserLauncher
     let mockAuthService
     let mockPosts
+    let mockPageUtils
 
     beforeEach(() => {
       mockPosts = createMockPosts({ count: 3 })
       mockAuthService = createMockAuthService({ authenticated: true })
 
-      // Create simplified browser launcher mock (focusing on behavior, not implementation)
+      // Create complete browser launcher mock with all required methods
+      const mockPage = {
+        goto: createMockFn(Promise.resolve({ status: () => 200 })),
+        evaluate: createMockFn(Promise.resolve(mockPosts)),
+        close: createMockFn(Promise.resolve()),
+        title: createMockFn(Promise.resolve('Test User - Medium')),
+        url: createMockFn('https://medium.com/@testuser'),
+        setUserAgent: createMockFn(Promise.resolve()),
+        waitForSelector: createMockFn(Promise.resolve()),
+        waitForFunction: createMockFn(Promise.resolve(true)),
+        screenshot: createMockFn(Promise.resolve()),
+        $eval: createMockFn(Promise.resolve('Sample body text')),
+        $$: createMockFn(Promise.resolve([])),
+        $: createMockFn(Promise.resolve(null)),
+        click: createMockFn(Promise.resolve()),
+        waitForTimeout: createMockFn(Promise.resolve()),
+        isClosed: createMockFn(false),
+        setViewport: createMockFn(Promise.resolve()),
+      }
+
+      const mockBrowser = {
+        newPage: createMockFn(Promise.resolve(mockPage)),
+        close: createMockFn(Promise.resolve()),
+        isConnected: createMockFn(true),
+      }
+
       mockBrowserLauncher = {
-        launch: createMockFn(
-          Promise.resolve({
-            newPage: createMockFn(
-              Promise.resolve({
-                goto: createMockFn(Promise.resolve({ status: () => 200 })),
-                evaluate: createMockFn(Promise.resolve(mockPosts)),
-                close: createMockFn(Promise.resolve()),
-                title: createMockFn(Promise.resolve('Test User - Medium')),
-                url: createMockFn('https://medium.com/@testuser'),
-                setUserAgent: createMockFn(Promise.resolve()),
-                waitForSelector: createMockFn(Promise.resolve()),
-                waitForFunction: createMockFn(Promise.resolve(true)),
-                screenshot: createMockFn(Promise.resolve()),
-                $eval: createMockFn(Promise.resolve('Sample body text')),
-                $$: createMockFn(Promise.resolve([])),
-                $: createMockFn(Promise.resolve(null)),
-                click: createMockFn(Promise.resolve()),
-                waitForTimeout: createMockFn(Promise.resolve()),
-              })
-            ),
-            close: createMockFn(Promise.resolve()),
-          })
-        ),
+        launch: createMockFn(Promise.resolve(mockBrowser)),
+      }
+
+      // Add pageUtils mock for the new modular architecture
+      const mockPageUtils = {
+        setupPage: createMockFn(Promise.resolve(mockPage)),
+        cleanupPage: createMockFn(Promise.resolve()),
+        cleanupBrowser: createMockFn(Promise.resolve()),
       }
 
       scraperModule = createScraperService({
         browserLauncher: mockBrowserLauncher,
         authService: mockAuthService,
+        pageUtils: mockPageUtils,
       })
     })
 
@@ -107,6 +119,7 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
         scraperModule = createScraperService({
           browserLauncher: mockBrowserLauncher,
           authService: mockAuthService,
+          pageUtils: mockPageUtils,
         })
       })
 
@@ -129,6 +142,16 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
     })
 
     describe('Given an invalid Medium profile URL', () => {
+      beforeEach(() => {
+        // Use the authenticated scraper service for URL validation test
+        const testScraper = createScraperService({
+          browserLauncher: mockBrowserLauncher,
+          authService: mockAuthService,
+          pageUtils: mockPageUtils,
+        })
+        scraperModule = testScraper
+      })
+
       describe('When I attempt to discover posts', () => {
         let discoveryResult
 
@@ -173,20 +196,30 @@ describe('Feature: Medium Blog Scraper - Post Discovery', () => {
             $: createMockFn(Promise.resolve(null)),
             click: createMockFn(Promise.resolve()),
             waitForTimeout: createMockFn(Promise.resolve()),
+            isClosed: createMockFn(false),
+            setViewport: createMockFn(Promise.resolve()),
           }
 
           const subdomainMockBrowser = {
             newPage: createMockFn(Promise.resolve(subdomainMockPage)),
             close: createMockFn(Promise.resolve()),
+            isConnected: createMockFn(true),
           }
 
           const subdomainMockLauncher = {
             launch: createMockFn(Promise.resolve(subdomainMockBrowser)),
           }
 
+          const subdomainMockPageUtils = {
+            setupPage: createMockFn(Promise.resolve(subdomainMockPage)),
+            cleanupPage: createMockFn(Promise.resolve()),
+            cleanupBrowser: createMockFn(Promise.resolve()),
+          }
+
           const subdomainScraper = createScraperService({
             browserLauncher: subdomainMockLauncher,
             authService: mockAuthService,
+            pageUtils: subdomainMockPageUtils,
           })
 
           const result = await subdomainScraper.discoverPosts(

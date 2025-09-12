@@ -7,6 +7,7 @@ describe('URL Filtering - Post Detection Behavior', () => {
   let mockBrowserLauncher
   let mockPage
   let mockAuthService
+  let mockPageUtils
 
   beforeEach(() => {
     mockAuthService = createMockAuthService({ authenticated: true })
@@ -27,6 +28,8 @@ describe('URL Filtering - Post Detection Behavior', () => {
       $: createMockFn(Promise.resolve(null)),
       click: createMockFn(Promise.resolve()),
       waitForTimeout: createMockFn(Promise.resolve()),
+      isClosed: createMockFn(false),
+      setViewport: createMockFn(Promise.resolve()),
     }
 
     mockBrowserLauncher = {
@@ -34,13 +37,22 @@ describe('URL Filtering - Post Detection Behavior', () => {
         Promise.resolve({
           newPage: createMockFn(Promise.resolve(mockPage)),
           close: createMockFn(Promise.resolve()),
+          isConnected: createMockFn(true),
         })
       ),
+    }
+
+    // Mock pageUtils for the new architecture
+    mockPageUtils = {
+      setupPage: createMockFn(Promise.resolve(mockPage)),
+      cleanupPage: createMockFn(Promise.resolve()),
+      cleanupBrowser: createMockFn(Promise.resolve()),
     }
 
     scraperService = createScraperService({
       browserLauncher: mockBrowserLauncher,
       authService: mockAuthService,
+      pageUtils: mockPageUtils,
     })
   })
 

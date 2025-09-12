@@ -133,6 +133,23 @@ export const unless = curry((predicate, fn, value) =>
   when(x => !predicate(x), fn, value)
 )
 
+// Result-aware pipe for composing Result-returning functions
+export const pipeResult =
+  (...fns) =>
+  initialValue =>
+    fns.reduce((acc, fn) => acc.flatMap(fn), Result.ok(initialValue))
+
+export const pipeResultAsync =
+  (...fns) =>
+  async initialValue => {
+    let result = Result.ok(initialValue)
+    for (const fn of fns) {
+      if (result.isError) break
+      result = result.isOk ? await fn(result.value) : result
+    }
+    return result
+  }
+
 // Result type for error handling
 export const Result = {
   ok: value => ({
