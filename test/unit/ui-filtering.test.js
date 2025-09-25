@@ -176,6 +176,97 @@ describe('Medium UI Element Filtering', () => {
     })
   })
 
+  describe('Medium Promotional Block Filtering', () => {
+    it('should remove promotional subscription blocks', async () => {
+      const htmlWithPromotionalBlock = `
+        <article>
+          <h1>Test Article</h1>
+          <p>This is the main article content.</p>
+          <h3>Get Bryan Finster's stories in your inbox</h3>
+          <p>Join Medium for free to get updates from this writer.</p>
+          <div>Subscribe</div>
+          <button>Subscribe</button>
+          <p>More content after the promotional block.</p>
+        </article>
+      `
+
+      const result = await converter.convertPost({
+        title: 'Test Article',
+        content: htmlWithPromotionalBlock,
+        url: 'https://medium.com/@user/test',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.markdown).toContain('This is the main article content')
+      expect(result.markdown).toContain(
+        'More content after the promotional block'
+      )
+      expect(result.markdown).not.toContain('stories in your inbox')
+      expect(result.markdown).not.toContain('Join Medium for free')
+      expect(result.markdown).not.toContain('get updates from this writer')
+      expect(result.markdown).not.toContain('Subscribe')
+    })
+
+    it('should remove various author name patterns in subscription blocks', async () => {
+      const htmlWithDifferentAuthors = `
+        <article>
+          <h1>Test Article</h1>
+          <p>Article content here.</p>
+          <h3>Get John's stories in your inbox</h3>
+          <p>Join Medium for free to get updates from this writer.</p>
+          <div>Subscribe</div>
+          <p>Another paragraph.</p>
+          <h3>Get Sarah Smith's stories in your inbox</h3>
+          <p>Join Medium to get updates from this author.</p>
+          <button>Subscribe</button>
+          <p>Final content.</p>
+        </article>
+      `
+
+      const result = await converter.convertPost({
+        title: 'Test Article',
+        content: htmlWithDifferentAuthors,
+        url: 'https://medium.com/@user/test',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.markdown).toContain('Article content here')
+      expect(result.markdown).toContain('Another paragraph')
+      expect(result.markdown).toContain('Final content')
+      expect(result.markdown).not.toContain("John's stories")
+      expect(result.markdown).not.toContain("Sarah Smith's stories")
+      expect(result.markdown).not.toContain('Join Medium')
+      expect(result.markdown).not.toContain('Subscribe')
+    })
+
+    it('should handle promotional blocks with different header levels', async () => {
+      const htmlWithDifferentHeaders = `
+        <article>
+          <h1>Test Article</h1>
+          <p>Main content.</p>
+          <h2>Get Author Name's stories in your inbox</h2>
+          <p>Join Medium for free to get updates from this writer.</p>
+          <span>Subscribe</span>
+          <span>Subscribe</span>
+          <p>More content.</p>
+        </article>
+      `
+
+      const result = await converter.convertPost({
+        title: 'Test Article',
+        content: htmlWithDifferentHeaders,
+        url: 'https://medium.com/@user/test',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.markdown).toContain('Main content')
+      expect(result.markdown).toContain('More content')
+      expect(result.markdown).not.toContain('stories in your inbox')
+      expect(result.markdown).not.toContain('Join Medium for free')
+      expect(result.markdown).not.toContain('Subscribe')
+    })
+  })
+
   describe('Content Preservation', () => {
     it('should preserve actual article content while filtering UI', async () => {
       const htmlMixed = `

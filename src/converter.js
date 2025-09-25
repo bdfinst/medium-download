@@ -101,10 +101,23 @@ const createConverter = (options = {}) => {
           text.includes('about the author') ||
           text.includes('follow me') ||
           text.includes('connect with me') ||
+          text.includes('join medium for free') ||
+          text.includes('get updates from this writer') ||
           (text.includes(' in ') &&
             text.length < 30 &&
             !text.includes('italic')) || // Short "in [Publication]" text, but not our test content
           text.match(/^.+\s+is a .+ (at|with)/i)
+        ) {
+          return true
+        }
+      }
+
+      // Filter promotional subscription headers
+      if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(node.tagName)) {
+        if (
+          text.includes('stories in your inbox') ||
+          /get .+['']s stories in your inbox/i.test(text) ||
+          /get .+ stories in your inbox/i.test(text)
         ) {
           return true
         }
@@ -205,6 +218,25 @@ const createConverter = (options = {}) => {
           text.includes('view responses') ||
           /\d+\.?\d*k?\s*followers?$/i.test(text) ||
           /\d+\s*responses?$/i.test(text)
+        ) {
+          return true
+        }
+      }
+
+      // Filter Medium promotional subscription blocks - only if element contains ONLY promotional content
+      if (text.length < 200 && text.length > 0) {
+        // Check if this element is specifically a promotional subscription element
+        if (
+          // Header patterns
+          /^get .+['']?s stories in your inbox$/i.test(text.trim()) ||
+          /^get .+ stories in your inbox$/i.test(text.trim()) ||
+          // Text patterns
+          text.trim() ===
+            'join medium for free to get updates from this writer.' ||
+          text.trim().toLowerCase() ===
+            'join medium for free to get updates from this writer' ||
+          // Button patterns
+          text.trim().toLowerCase() === 'subscribe'
         ) {
           return true
         }
@@ -377,6 +409,18 @@ const createConverter = (options = {}) => {
 
       // Post-process markdown for cleaner output
       markdown = markdown
+        // Remove promotional subscription headers specifically
+        .replace(/^#{2,6}\s+Get .+['']?s stories in your inbox\s*\n/gim, '')
+        .replace(/^#{2,6}\s+Get .+ stories in your inbox\s*\n/gim, '')
+        // Remove standalone promotional text that might remain
+        .replace(
+          /Join Medium for free to get updates from this writer\.?\s*\n/gi,
+          ''
+        )
+        .replace(/Join Medium to get updates from this author\.?\s*\n/gi, '')
+        .replace(/Subscribe\s*\n\s*Subscribe\s*\n/gi, '')
+        // Remove isolated "Subscribe" lines but not within other content
+        .replace(/^\s*Subscribe\s*$/gm, '')
         // Fix multiple consecutive line breaks
         .replace(/\n{3,}/g, '\n\n')
         // Fix spacing around headers
